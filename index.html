@@ -473,19 +473,49 @@ let saveTimer = null;
 let draftItems = {};   // dayId -> [{text, price}]  (staged, unsaved lines for the activity being built)
 let draftMeta = {};    // dayId -> {time, name, type}
 
+/* Use Claude's storage API when this is viewed inside Claude; otherwise fall back
+   to the browser's own localStorage, which is what actually persists when this
+   file is opened standalone (e.g. from your phone's Home Screen). */
+const storageAdapter = (window.storage && typeof window.storage.get === 'function') ? {
+  get: (k) => window.storage.get(k, false),
+  set: (k, v) => window.storage.set(k, v, false)
+} : {
+  get: async (k) => {
+    const v = localStorage.getItem(k);
+    return v !== null ? {value: v} : null;
+  },
+  set: async (k, v) => { localStorage.setItem(k, v); return {value: v}; }
+};
+
 function fmt(n){ return '₱' + Number(n||0).toLocaleString('en-PH', {maximumFractionDigits:0}); }
+
+function saveNow(){
+  clearTimeout(saveTimer);
+  try{
+    // localStorage.setItem is synchronous, so this reliably completes
+    // even if the page is being closed or backgrounded right now.
+    if(!(window.storage && typeof window.storage.get === 'function')){
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    } else {
+      storageAdapter.set(STORAGE_KEY, JSON.stringify(state)).catch(e => console.error('save failed', e));
+    }
+  }catch(e){ console.error('save failed', e); }
+}
 
 function scheduleSave(){
   clearTimeout(saveTimer);
-  saveTimer = setTimeout(async () => {
-    try{ await window.storage.set(STORAGE_KEY, JSON.stringify(state), false); }
-    catch(e){ console.error('save failed', e); }
-  }, 250);
+  saveTimer = setTimeout(saveNow, 80);
 }
+
+// Flush immediately whenever the page is about to be hidden or closed —
+// this is what actually protects against losing an edit made right
+// before switching apps or closing the tab on iOS.
+document.addEventListener('visibilitychange', () => { if(document.hidden) saveNow(); });
+window.addEventListener('pagehide', saveNow);
 
 async function load(){
   try{
-    const res = await window.storage.get(STORAGE_KEY, false);
+    const res = await storageAdapter.get(STORAGE_KEY);
     if(res && res.value){
       const parsed = JSON.parse(res.value);
       state = Object.assign(state, parsed);
