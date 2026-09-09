@@ -31,7 +31,6 @@
   }
   .wrap{max-width:520px;margin:0 auto;padding:0 18px;}
 
-  /* Header ticket strip */
   header{
     background:var(--ink);
     color:var(--bg);
@@ -60,7 +59,6 @@
   }
   header .dates b{color:var(--bg);font-weight:600;}
 
-  /* Tabs */
   nav.tabs{
     display:flex;
     max-width:520px;
@@ -92,50 +90,66 @@
   .view{display:none;}
   .view.active{display:block;}
 
-  /* Leg heading */
-  .leg{
+  /* Day strip (calendar row) */
+  .day-strip{
     display:flex;
+    gap:8px;
+    overflow-x:auto;
+    padding:2px 2px 16px;
+    -webkit-overflow-scrolling:touch;
+  }
+  .day-chip{
+    flex-shrink:0;
+    display:flex;
+    flex-direction:column;
     align-items:center;
-    gap:10px;
-    margin:22px 0 10px;
+    gap:3px;
+    border:1px solid var(--line);
+    background:var(--card);
+    border-radius:12px;
+    padding:9px 15px;
+    cursor:pointer;
+    min-width:56px;
   }
-  .leg:first-child{margin-top:0;}
-  .leg .dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
-  .leg.boracay .dot{background:var(--teal);}
-  .leg.cebu .dot{background:var(--rust);}
-  .leg h2{
-    font-family:'Fraunces', serif;
-    font-size:17px;
-    font-weight:600;
-    margin:0;
+  .day-chip .dow{font-size:10px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.04em;}
+  .day-chip .num{font-family:'Fraunces',serif;font-size:16px;font-weight:600;line-height:1;}
+  .day-chip .amt{font-size:9px;font-family:'IBM Plex Mono',monospace;color:var(--ink-soft);}
+  .day-chip.boracay{border-color:var(--teal);}
+  .day-chip.cebu{border-color:var(--rust);}
+  .day-chip.active.boracay{background:var(--teal);border-color:var(--teal);}
+  .day-chip.active.cebu{background:var(--rust);border-color:var(--rust);}
+  .day-chip.active .dow, .day-chip.active .num, .day-chip.active .amt{color:#fff;}
+  .day-chip.add-day{
+    border-style:dashed;
+    color:var(--ink-soft);
+    justify-content:center;
+    min-width:44px;
   }
-  .leg span{font-size:12px;color:var(--ink-soft);}
+  .day-chip.add-day .plus{font-size:20px;line-height:1;}
 
-  /* Day card (ticket stub) */
-  .day-card{
+  /* Expanded day card */
+  .expand-card{
     background:var(--card);
     border:1px solid var(--line);
-    border-radius:10px;
-    margin-bottom:14px;
+    border-radius:12px;
     overflow:hidden;
   }
-  .day-card .day-head{
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    padding:12px 16px;
-    border-bottom:1px dashed var(--line);
-  }
-  .day-card.boracay .day-head{background:var(--teal-tint);}
-  .day-card.cebu .day-head{background:var(--rust-tint);}
-  .day-head .day-name{font-weight:600;font-size:14px;}
-  .day-head .day-date{font-size:12px;color:var(--ink-soft);font-family:'IBM Plex Mono',monospace;}
+  .expand-head{padding:16px;border-bottom:1px dashed var(--line);}
+  .expand-card.boracay .expand-head{background:var(--teal-tint);}
+  .expand-card.cebu .expand-head{background:var(--rust-tint);}
+  .expand-head .row1{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;}
+  .expand-head h2{font-family:'Fraunces',serif;font-size:19px;margin:0;}
+  .expand-head .sub{font-size:12px;color:var(--ink-soft);margin-top:2px;}
+  .expand-head button.remove-day{background:none;border:none;color:var(--ink-soft);font-size:11.5px;text-decoration:underline;cursor:pointer;padding:2px 0;flex-shrink:0;}
+  .expand-head .tentative{margin-top:12px;display:flex;justify-content:space-between;align-items:baseline;}
+  .expand-head .tentative .lbl{font-size:11px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.03em;}
+  .expand-head .tentative b{font-family:'IBM Plex Mono',monospace;font-size:18px;}
 
   .activities{padding:6px 16px 4px;}
   .activity{
     display:flex;
     gap:12px;
-    padding:10px 0;
+    padding:12px 0;
     border-bottom:1px solid var(--line);
   }
   .activity:last-child{border-bottom:none;}
@@ -147,7 +161,7 @@
     flex-shrink:0;
     padding-top:1px;
   }
-  .activity .body{flex:1;}
+  .activity .body{flex:1;min-width:0;}
   .activity .name-row{display:flex;align-items:center;gap:7px;flex-wrap:wrap;}
   .activity .name{font-size:14px;font-weight:500;}
   .activity .type-badge{
@@ -160,7 +174,7 @@
     padding:2px 6px;
     flex-shrink:0;
   }
-  .activity .note{font-size:12px;color:var(--ink-soft);margin-top:3px;}
+  .activity .note{font-size:12px;color:var(--ink-soft);margin-top:4px;}
   .activity .price{font-size:12px;color:var(--ink);font-weight:500;margin-top:2px;font-family:'IBM Plex Mono', monospace;}
   .activity .del{
     background:none;border:none;color:var(--ink-soft);
@@ -169,12 +183,7 @@
   }
   .empty{font-size:13px;color:var(--ink-soft);padding:12px 0;font-style:italic;}
 
-  .add-row{
-    display:flex;
-    flex-wrap:wrap;
-    gap:6px;
-    padding:10px 16px 14px;
-  }
+  .add-row{display:flex;flex-wrap:wrap;gap:6px;padding:12px 16px 16px;}
   .add-row input, .add-row select{
     border:1px solid var(--line);
     border-radius:6px;
@@ -191,23 +200,61 @@
   .add-row .t-detail{flex:1 1 140px;min-width:0;}
   .add-row .t-price{width:92px;flex-shrink:0;}
   .add-row button.add{
-    border:none;
-    background:var(--ink);
-    color:var(--bg);
-    border-radius:6px;
-    padding:0 13px;
-    font-size:14px;
-    cursor:pointer;
-    flex-shrink:0;
+    border:none;background:var(--ink);color:var(--bg);
+    border-radius:6px;padding:0 13px;font-size:14px;cursor:pointer;flex-shrink:0;
   }
   .add-row .full-row{display:flex;gap:6px;width:100%;flex-wrap:wrap;}
+  .add-row .section-label{font-size:11px;text-transform:uppercase;letter-spacing:.03em;color:var(--ink-soft);width:100%;margin:4px 0 -2px;}
   .staged-items{width:100%;}
-  .staged-items:not(:empty){
-    border-top:1px dashed var(--line);
-    margin-top:2px;
-    padding-top:2px;
-  }
+  .staged-items:not(:empty){border-top:1px dashed var(--line);margin-top:2px;padding-top:2px;}
 
+  /* Modal (Add a day) */
+  .modal-backdrop{
+    display:none;
+    position:fixed;inset:0;
+    background:rgba(27,42,46,0.5);
+    z-index:50;
+    align-items:flex-end;
+    justify-content:center;
+  }
+  .modal-backdrop.open{display:flex;}
+  .modal-sheet{
+    background:var(--bg);
+    width:100%;
+    max-width:520px;
+    max-height:82vh;
+    overflow-y:auto;
+    border-radius:16px 16px 0 0;
+    padding-bottom:22px;
+  }
+  .modal-head{
+    position:sticky;top:0;
+    display:flex;justify-content:space-between;align-items:center;
+    background:var(--ink);color:var(--bg);
+    padding:15px 18px;
+    font-family:'Fraunces',serif;font-size:16px;font-weight:600;
+    border-radius:16px 16px 0 0;
+    z-index:2;
+  }
+  .modal-head button.modal-close{background:none;border:none;color:var(--bg);font-size:19px;cursor:pointer;padding:0 4px;line-height:1;}
+  .modal-body{padding:16px 18px 4px;}
+  .modal-body label{font-size:11px;text-transform:uppercase;letter-spacing:.03em;color:var(--ink-soft);display:block;margin:10px 0 4px;}
+  .modal-body input, .modal-body select{
+    width:100%;
+    border:1px solid var(--line);
+    border-radius:6px;
+    padding:10px 11px;
+    font-size:14px;
+    font-family:inherit;
+    background:var(--card);
+    color:var(--ink);
+  }
+  .modal-body button.save{
+    width:100%;
+    margin-top:18px;
+    border:none;background:var(--ink);color:var(--bg);
+    border-radius:8px;padding:12px;font-size:14px;font-weight:500;cursor:pointer;
+  }
 
   /* Expenses */
   .totals-bar{
@@ -223,13 +270,7 @@
   .totals-bar .label{font-size:12px;color:#B9C6C6;}
   .totals-bar .amount{font-family:'Fraunces', serif;font-size:26px;font-weight:600;}
 
-  .day-select{
-    display:flex;
-    gap:6px;
-    overflow-x:auto;
-    padding-bottom:12px;
-    margin-bottom:4px;
-  }
+  .day-select{display:flex;gap:6px;overflow-x:auto;padding-bottom:12px;margin-bottom:4px;}
   .day-select button{
     flex-shrink:0;
     border:1px solid var(--line);
@@ -240,124 +281,46 @@
     font-family:'IBM Plex Mono', monospace;
     color:var(--ink-soft);
     cursor:pointer;
+    text-align:center;
   }
-  .day-select button.active{
-    background:var(--ink);
-    color:var(--bg);
-    border-color:var(--ink);
-  }
+  .day-select button.active{background:var(--ink);color:var(--bg);border-color:var(--ink);}
 
-  .exp-card{
-    background:var(--card);
-    border:1px solid var(--line);
-    border-radius:10px;
-    padding:14px 16px;
-    margin-bottom:14px;
-  }
-  .exp-row{
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    padding:9px 0;
-    border-bottom:1px solid var(--line);
-    gap:10px;
-  }
+  .exp-card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:14px;}
+  .exp-row{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--line);gap:8px;}
   .exp-row:last-of-type{border-bottom:none;}
   .exp-row .cat{
-    font-size:10px;
-    letter-spacing:0.03em;
-    color:var(--ink-soft);
-    background:var(--bg);
-    border:1px solid var(--line);
-    border-radius:4px;
-    padding:2px 6px;
-    flex-shrink:0;
+    font-size:10px;letter-spacing:0.03em;color:var(--ink-soft);
+    background:var(--bg);border:1px solid var(--line);border-radius:4px;
+    padding:2px 6px;flex-shrink:0;
   }
+  .exp-row .cat.auto{background:var(--teal-tint);border-color:var(--teal);color:var(--teal-deep);}
   .exp-row .desc{flex:1;font-size:14px;min-width:0;}
   .exp-row .amt{font-family:'IBM Plex Mono', monospace;font-size:14px;font-weight:500;}
   .exp-row .del{background:none;border:none;color:var(--ink-soft);cursor:pointer;font-size:16px;padding:0 2px;}
-  .day-total{
-    display:flex;
-    justify-content:space-between;
-    padding-top:10px;
-    margin-top:2px;
-    font-size:13px;
-    color:var(--ink-soft);
-  }
+  .day-total{display:flex;justify-content:space-between;padding-top:10px;margin-top:2px;font-size:13px;color:var(--ink-soft);}
 
-  .exp-add{
-    display:flex;
-    flex-wrap:wrap;
-    gap:6px;
-    margin-top:12px;
-  }
+  .exp-add{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px;}
   .exp-add select, .exp-add input{
-    border:1px solid var(--line);
-    border-radius:6px;
-    padding:8px 9px;
-    font-size:13px;
-    font-family:inherit;
-    background:var(--bg);
-    color:var(--ink);
+    border:1px solid var(--line);border-radius:6px;padding:8px 9px;font-size:13px;
+    font-family:inherit;background:var(--bg);color:var(--ink);
   }
   .exp-add .e-desc{flex:1 1 120px;min-width:0;}
   .exp-add .e-amt{width:90px;}
-  .exp-add button.add{
-    border:none;background:var(--ink);color:var(--bg);
-    border-radius:6px;padding:0 13px;font-size:14px;cursor:pointer;
-  }
+  .exp-add button.add{border:none;background:var(--ink);color:var(--bg);border-radius:6px;padding:0 13px;font-size:14px;cursor:pointer;}
 
   /* Summary */
-  .sum-card{
-    background:var(--card);
-    border:1px solid var(--line);
-    border-radius:10px;
-    padding:18px;
-    margin-bottom:14px;
-  }
-  .sum-card h3{
-    font-family:'Fraunces', serif;
-    font-size:15px;
-    margin:0 0 12px;
-  }
+  .sum-card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:18px;margin-bottom:14px;}
+  .sum-card h3{font-family:'Fraunces', serif;font-size:15px;margin:0 0 12px;}
   .bar-row{margin-bottom:10px;}
-  .bar-row .bar-top{
-    display:flex;
-    justify-content:space-between;
-    font-size:12px;
-    margin-bottom:4px;
-    color:var(--ink-soft);
-  }
-  .bar-track{
-    height:7px;
-    background:var(--line);
-    border-radius:4px;
-    overflow:hidden;
-  }
+  .bar-row .bar-top{display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;color:var(--ink-soft);}
+  .bar-track{height:7px;background:var(--line);border-radius:4px;overflow:hidden;}
   .bar-fill{height:100%;border-radius:4px;}
-  .leg-total{
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    padding:10px 0;
-    border-bottom:1px solid var(--line);
-  }
+  .leg-total{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--line);}
   .leg-total:last-child{border-bottom:none;}
-  .budget-row{
-    display:flex;
-    gap:8px;
-    align-items:center;
-    margin-top:10px;
-  }
+  .budget-row{display:flex;gap:8px;align-items:center;margin-top:10px;}
   .budget-row input{
-    border:1px solid var(--line);
-    border-radius:6px;
-    padding:8px 9px;
-    font-size:13px;
-    width:110px;
-    font-family:inherit;
-    background:var(--bg);
-    color:var(--ink);
+    border:1px solid var(--line);border-radius:6px;padding:8px 9px;font-size:13px;width:110px;
+    font-family:inherit;background:var(--bg);color:var(--ink);
   }
   .budget-row label{font-size:12px;color:var(--ink-soft);}
 
@@ -385,7 +348,10 @@
 <main>
 
   <!-- ITINERARY -->
-  <section id="view-itinerary" class="view active"></section>
+  <section id="view-itinerary" class="view active">
+    <div class="day-strip" id="day-strip"></div>
+    <div id="day-expand"></div>
+  </section>
 
   <!-- EXPENSES -->
   <section id="view-expenses" class="view">
@@ -425,7 +391,25 @@
 </main>
 </div>
 
-<footer class="hint">Tap the browser's share icon and choose "Add to Home Screen" to open this like a regular app. Everything you enter is saved automatically on this device.</footer>
+<!-- Add Day modal -->
+<div class="modal-backdrop" id="addday-backdrop">
+  <div class="modal-sheet">
+    <div class="modal-head"><span>Add a day</span><button class="modal-close" id="addday-close">✕</button></div>
+    <div class="modal-body">
+      <label>Day label</label>
+      <input type="text" id="nd-label" placeholder="e.g. Sat">
+      <label>Date</label>
+      <input type="text" id="nd-date" placeholder="e.g. Dec 12">
+      <label>Destination</label>
+      <select id="nd-dest"></select>
+      <label>Note (optional)</label>
+      <input type="text" id="nd-note" placeholder="e.g. Boracay → Cebu">
+      <button class="save" id="nd-add">Add day</button>
+    </div>
+  </div>
+</div>
+
+<footer class="hint">Tap the browser's share icon and choose "Add to Home Screen" to open this like a regular app. Everything you enter is saved automatically on this device. Prices you add to an activity are automatically logged as expenses for that day.</footer>
 
 <script>
 const DEFAULT_DAYS = [
@@ -443,13 +427,13 @@ const DEST_OPTIONS = [
   {value:'other', label:'Other'},
 ];
 const ACTIVITY_TYPES = {
-  restaurant:    {label:'Restaurant',     detailLabel:'Food to order',   priceLabel:'Tentative price'},
-  beach:         {label:'Beach',          detailLabel:'Note',            priceLabel:'Tentative price'},
-  transportation:{label:'Transportation', detailLabel:'Type of transport', priceLabel:'Fee'},
-  sightseeing:   {label:'Sightseeing',    detailLabel:'Note',            priceLabel:'Tentative price'},
-  accommodation: {label:'Accommodation',  detailLabel:'Note',            priceLabel:'Tentative price'},
-  shopping:      {label:'Shopping',       detailLabel:'What to buy',     priceLabel:'Tentative price'},
-  other:         {label:'Other',          detailLabel:'Note',            priceLabel:'Tentative price'},
+  restaurant:    {label:'Restaurant',     detailLabel:'Food to order',     priceLabel:'Tentative price', category:'Food'},
+  beach:         {label:'Beach',          detailLabel:'Note',              priceLabel:'Tentative price', category:'Activities'},
+  transportation:{label:'Transportation', detailLabel:'Type of transport', priceLabel:'Fee',             category:'Transport'},
+  sightseeing:   {label:'Sightseeing',    detailLabel:'Note',              priceLabel:'Tentative price', category:'Activities'},
+  accommodation: {label:'Accommodation',  detailLabel:'Note',              priceLabel:'Tentative price', category:'Accommodation'},
+  shopping:      {label:'Shopping',       detailLabel:'What to buy',       priceLabel:'Tentative price', category:'Shopping'},
+  other:         {label:'Other',          detailLabel:'Note',              priceLabel:'Tentative price', category:'Other'},
 };
 const CATEGORIES = ['Transport','Food','Accommodation','Activities','Shopping','Other'];
 const STORAGE_KEY = 'trip-boracay-cebu';
@@ -457,9 +441,9 @@ const STORAGE_KEY = 'trip-boracay-cebu';
 let DAYS = DEFAULT_DAYS.slice();
 
 let state = {
-  days: null,       // set on load: array of {id,label,date,dest,label2}
-  itinerary: {},    // { d6: [{time,name,note}] }
-  expenses: {},     // { d6: [{cat,desc,amt}] }
+  days: null,
+  itinerary: {},
+  expenses: {},
   budget: null
 };
 
@@ -469,13 +453,11 @@ function ensureDayBuckets(){
 ensureDayBuckets();
 
 let activeExpenseDay = DAYS[0].id;
+let activeItinDay = DAYS[0].id;
 let saveTimer = null;
-let draftItems = {};   // dayId -> [{text, price}]  (staged, unsaved lines for the activity being built)
-let draftMeta = {};    // dayId -> {time, name, type}
+let draftItems = {};
+let draftMeta = {};
 
-/* Use Claude's storage API when this is viewed inside Claude; otherwise fall back
-   to the browser's own localStorage, which is what actually persists when this
-   file is opened standalone (e.g. from your phone's Home Screen). */
 const storageAdapter = (window.storage && typeof window.storage.get === 'function') ? {
   get: (k) => window.storage.get(k, false),
   set: (k, v) => window.storage.set(k, v, false)
@@ -487,13 +469,13 @@ const storageAdapter = (window.storage && typeof window.storage.get === 'functio
   set: async (k, v) => { localStorage.setItem(k, v); return {value: v}; }
 };
 
-function fmt(n){ return '₱' + Number(n||0).toLocaleString('en-PH', {maximumFractionDigits:0}); }
+function round2(n){ return Math.round((Number(n||0) + Number.EPSILON) * 100) / 100; }
+function sumBy(arr, getter){ return round2((arr||[]).reduce((s,x) => round2(s + round2(getter(x))), 0)); }
+function fmt(n){ return '₱' + round2(n).toLocaleString('en-PH', {minimumFractionDigits:0, maximumFractionDigits:2}); }
 
 function saveNow(){
   clearTimeout(saveTimer);
   try{
-    // localStorage.setItem is synchronous, so this reliably completes
-    // even if the page is being closed or backgrounded right now.
     if(!(window.storage && typeof window.storage.get === 'function')){
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     } else {
@@ -501,15 +483,10 @@ function saveNow(){
     }
   }catch(e){ console.error('save failed', e); }
 }
-
 function scheduleSave(){
   clearTimeout(saveTimer);
   saveTimer = setTimeout(saveNow, 80);
 }
-
-// Flush immediately whenever the page is about to be hidden or closed —
-// this is what actually protects against losing an edit made right
-// before switching apps or closing the tab on iOS.
 document.addEventListener('visibilitychange', () => { if(document.hidden) saveNow(); });
 window.addEventListener('pagehide', saveNow);
 
@@ -525,76 +502,90 @@ async function load(){
   state.days = DAYS;
   ensureDayBuckets();
   activeExpenseDay = DAYS[0] ? DAYS[0].id : null;
+  activeItinDay = DAYS[0] ? DAYS[0].id : null;
+  document.getElementById('nd-dest').innerHTML = DEST_OPTIONS.map(o=>`<option value="${o.value}">${o.label}</option>`).join('');
   renderAll();
 }
 
 function renderAll(){
-  renderItinerary();
+  renderDayStrip();
+  renderDayExpand();
   renderExpenseTabs();
   renderExpenses();
   renderSummary();
 }
 
-/* ---------- ITINERARY ---------- */
-function legHeading(dest){
-  if(dest==='boracay') return {title:'Boracay', cls:'boracay'};
-  if(dest==='cebu') return {title:'Cebu', cls:'cebu'};
-  if(dest==='transit') return {title:'Transit day', cls:'boracay'};
-  return {title:'Other', cls:'cebu'};
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 }
 
+/* ---------- ITINERARY ---------- */
+function legClass(dest){ return dest==='cebu' ? 'cebu' : 'boracay'; }
+function legHeading(dest){
+  if(dest==='boracay') return 'Boracay';
+  if(dest==='cebu') return 'Cebu';
+  if(dest==='transit') return 'Transit day';
+  return 'Other';
+}
 function getDraftMeta(dayId){
   if(!draftMeta[dayId]) draftMeta[dayId] = {time:'', name:'', type:'restaurant'};
   return draftMeta[dayId];
 }
-
-function getItems(a){
-  if(a.items) return a.items;
-  if(a.detail) return [{text:a.detail, price:a.price||null}]; // backward compatibility
-  return [];
+function activityTotal(a){
+  return sumBy(a.items || [], it => it.price || 0);
+}
+function dayTentativeTotal(dayId){
+  return sumBy(state.itinerary[dayId] || [], a => activityTotal(a));
 }
 
-function renderStagedItems(dayId){
-  const el = document.getElementById('staged-'+dayId);
-  if(!el) return;
-  const items = draftItems[dayId] || [];
-  el.innerHTML = items.map((it,i) => `
-    <div class="exp-row" style="padding:6px 0;">
-      <span class="desc" style="font-size:13px;">${escapeHtml(it.text)}</span>
-      ${it.price ? `<span class="amt" style="font-size:13px;">${fmt(it.price)}</span>` : ''}
-      <button class="del" data-day="${dayId}" data-idx="${i}" data-kind="staged">✕</button>
-    </div>`).join('');
-  el.querySelectorAll('button.del[data-kind="staged"]').forEach(b => b.addEventListener('click', e => {
-    draftItems[dayId].splice(+e.target.dataset.idx, 1);
-    renderStagedItems(dayId);
+function renderDayStrip(){
+  const el = document.getElementById('day-strip');
+  let html = DAYS.map(d => {
+    const t = dayTentativeTotal(d.id);
+    return `<div class="day-chip ${legClass(d.dest)} ${d.id===activeItinDay?'active':''}" data-day="${d.id}">
+      <span class="dow">${escapeHtml(d.label)}</span>
+      <span class="num">${escapeHtml(d.date.split(' ').pop())}</span>
+      ${t>0 ? `<span class="amt">${fmt(t)}</span>` : ''}
+    </div>`;
+  }).join('');
+  html += `<div class="day-chip add-day" id="add-day-chip"><span class="plus">+</span><span style="font-size:10px;">Add day</span></div>`;
+  el.innerHTML = html;
+
+  el.querySelectorAll('.day-chip[data-day]').forEach(chip => chip.addEventListener('click', () => {
+    activeItinDay = chip.dataset.day;
+    renderDayStrip(); renderDayExpand();
   }));
+  document.getElementById('add-day-chip').addEventListener('click', openAddDayModal);
 }
 
-function renderItinerary(){
-  const el = document.getElementById('view-itinerary');
-  let html = '';
-  let currentLeg = null;
-  DAYS.forEach(d => {
-    if(d.dest !== currentLeg){
-      currentLeg = d.dest;
-      const h = legHeading(d.dest);
-      html += `<div class="leg ${h.cls}"><div class="dot"></div><h2>${h.title}</h2></div>`;
-    }
-    const cardClass = d.dest==='cebu' ? 'cebu' : 'boracay';
-    const acts = state.itinerary[d.id] || [];
-    html += `<div class="day-card ${cardClass}">
-      <div class="day-head">
-        <span class="day-name">${escapeHtml(d.label)}${d.label2 ? ' · '+escapeHtml(d.label2) : ''}</span>
-        <span style="display:flex;align-items:center;gap:8px">
-          <span class="day-date">${escapeHtml(d.date)}</span>
-          <button class="del" data-day="${d.id}" data-kind="day" title="Remove this day">✕</button>
-        </span>
+function renderDayExpand(){
+  const el = document.getElementById('day-expand');
+  const d = DAYS.find(x => x.id === activeItinDay);
+  if(!d){
+    el.innerHTML = '<div class="empty">No days yet — tap "Add day" above to start.</div>';
+    return;
+  }
+  const acts = state.itinerary[d.id] || [];
+  const total = dayTentativeTotal(d.id);
+  const meta = getDraftMeta(d.id);
+
+  el.innerHTML = `
+    <div class="expand-card ${legClass(d.dest)}">
+      <div class="expand-head">
+        <div class="row1">
+          <div>
+            <h2>${legHeading(d.dest)} · ${escapeHtml(d.label)}${d.label2 ? ' · '+escapeHtml(d.label2):''}</h2>
+            <div class="sub">${escapeHtml(d.date)}</div>
+          </div>
+          <button class="remove-day" id="remove-day-btn">Remove day</button>
+        </div>
+        <div class="tentative"><span class="lbl">Tentative total</span><b>${fmt(total)}</b></div>
       </div>
       <div class="activities" id="acts-${d.id}">
         ${acts.length ? acts.map((a,i) => {
           const t = ACTIVITY_TYPES[a.type] || ACTIVITY_TYPES.other;
-          const items = getItems(a);
-          const subtotal = items.reduce((s,it)=>s+Number(it.price||0),0);
+          const items = a.items || [];
+          const subtotal = activityTotal(a);
           return `
           <div class="activity">
             <div class="time">${a.time||''}</div>
@@ -605,136 +596,173 @@ function renderItinerary(){
                   <div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.03em;color:var(--ink-soft);margin-bottom:2px;">${escapeHtml(t.detailLabel)}</div>
                   ${items.map(it => `<div style="display:flex;justify-content:space-between;gap:8px;"><span>${escapeHtml(it.text)}</span>${it.price?`<span style="font-family:'IBM Plex Mono',monospace;">${fmt(it.price)}</span>`:''}</div>`).join('')}
                 </div>` : ''}
-              ${subtotal>0 ? `<div class="price">Subtotal: ~${fmt(subtotal)}</div>` : ''}
+              ${subtotal>0 ? `<div class="price">Subtotal: ~${fmt(subtotal)} · logged as expense</div>` : ''}
             </div>
-            <button class="del" data-day="${d.id}" data-idx="${i}" data-kind="act">✕</button>
+            <button class="del" data-idx="${i}" data-kind="act">✕</button>
           </div>`;
         }).join('') : '<div class="empty">Nothing planned yet</div>'}
       </div>
       <div class="add-row">
+        <div class="section-label">Add an activity</div>
         <div class="full-row">
-          <input class="t-time" type="text" placeholder="9:00" value="${escapeHtml(getDraftMeta(d.id).time)}" data-day="${d.id}" data-field="time">
-          <input class="t-name" type="text" placeholder="Add activity" value="${escapeHtml(getDraftMeta(d.id).name)}" data-day="${d.id}" data-field="name">
-          <select class="t-type" data-day="${d.id}" data-field="type">
-            ${Object.entries(ACTIVITY_TYPES).map(([k,v])=>`<option value="${k}" ${getDraftMeta(d.id).type===k?'selected':''}>${v.label}</option>`).join('')}
+          <input class="t-time" type="text" placeholder="9:00" id="f-time" value="${escapeHtml(meta.time)}">
+          <input class="t-name" type="text" placeholder="Add activity" id="f-name" value="${escapeHtml(meta.name)}">
+          <select class="t-type" id="f-type">
+            ${Object.entries(ACTIVITY_TYPES).map(([k,v])=>`<option value="${k}" ${meta.type===k?'selected':''}>${v.label}</option>`).join('')}
           </select>
         </div>
         <div class="full-row">
-          <input class="t-detail" type="text" placeholder="${ACTIVITY_TYPES[getDraftMeta(d.id).type].detailLabel}" id="item-text-${d.id}">
-          <input class="t-price" type="number" placeholder="Price (optional)" id="item-price-${d.id}">
-          <button class="add" data-day="${d.id}" data-kind="line">+ line</button>
+          <input class="t-detail" type="text" placeholder="${ACTIVITY_TYPES[meta.type].detailLabel}" id="item-text">
+          <input class="t-price" type="number" placeholder="Price (optional)" id="item-price">
+          <button class="add" id="add-line-btn">+ line</button>
         </div>
-        <div class="staged-items" id="staged-${d.id}"></div>
+        <div class="staged-items" id="staged-items"></div>
         <div class="full-row">
-          <button class="add" data-day="${d.id}" data-kind="act" style="flex:1;">Save activity</button>
+          <button class="add" id="save-act-btn" style="flex:1;">Save activity</button>
         </div>
-      </div>
-    </div>`;
-  });
-
-  if(!DAYS.length){
-    html += '<div class="empty">No days yet — add your first one below</div>';
-  }
-
-  html += `
-    <div class="day-card" style="border-style:dashed;">
-      <div class="day-head"><span class="day-name">Add a day</span></div>
-      <div class="add-row" style="flex-wrap:wrap;">
-        <input class="t-time" style="width:64px" type="text" placeholder="Fri" id="nd-label">
-        <input class="t-time" style="width:88px" type="text" placeholder="Dec 12" id="nd-date">
-        <select id="nd-dest" style="border:1px solid var(--line);border-radius:6px;padding:8px 9px;font-size:13px;background:var(--bg);color:var(--ink);">
-          ${DEST_OPTIONS.map(o=>`<option value="${o.value}">${o.label}</option>`).join('')}
-        </select>
-        <input class="t-name" type="text" placeholder="Note (optional)" id="nd-note">
-        <button class="add" id="nd-add">+</button>
       </div>
     </div>
   `;
 
-  el.innerHTML = html;
+  document.getElementById('remove-day-btn').addEventListener('click', () => removeDay(d.id));
 
   el.querySelectorAll('button.del[data-kind="act"]').forEach(b => b.addEventListener('click', e => {
-    const day = e.target.dataset.day, idx = +e.target.dataset.idx;
-    state.itinerary[day].splice(idx,1);
-    scheduleSave(); renderItinerary();
+    deleteActivity(d.id, +e.target.dataset.idx);
   }));
-  el.querySelectorAll('select.t-type').forEach(sel => {
-    sel.addEventListener('change', () => {
-      const dayId = sel.dataset.day;
-      getDraftMeta(dayId).type = sel.value;
-      const card = sel.closest('.day-card');
-      const t = ACTIVITY_TYPES[sel.value] || ACTIVITY_TYPES.other;
-      card.querySelector('.t-detail').placeholder = t.detailLabel;
-    });
+
+  document.getElementById('f-time').addEventListener('input', e => { getDraftMeta(d.id).time = e.target.value; });
+  document.getElementById('f-name').addEventListener('input', e => { getDraftMeta(d.id).name = e.target.value; });
+  document.getElementById('f-type').addEventListener('change', e => {
+    getDraftMeta(d.id).type = e.target.value;
+    document.getElementById('item-text').placeholder = ACTIVITY_TYPES[e.target.value].detailLabel;
   });
-  el.querySelectorAll('input.t-time[data-field="time"]').forEach(inp => inp.addEventListener('input', () => {
-    getDraftMeta(inp.dataset.day).time = inp.value;
-  }));
-  el.querySelectorAll('input.t-name[data-field="name"]').forEach(inp => inp.addEventListener('input', () => {
-    getDraftMeta(inp.dataset.day).name = inp.value;
-  }));
-  el.querySelectorAll('button.add[data-kind="line"]').forEach(b => b.addEventListener('click', e => {
-    const dayId = e.target.dataset.day;
-    const textInput = document.getElementById('item-text-'+dayId);
-    const priceInput = document.getElementById('item-price-'+dayId);
+  document.getElementById('add-line-btn').addEventListener('click', () => {
+    const textInput = document.getElementById('item-text');
+    const priceInput = document.getElementById('item-price');
     const text = textInput.value.trim();
     const price = priceInput.value ? parseFloat(priceInput.value) : null;
     if(!text) return;
-    if(!draftItems[dayId]) draftItems[dayId] = [];
-    draftItems[dayId].push({text, price});
-    textInput.value = ''; priceInput.value = '';
-    textInput.focus();
-    renderStagedItems(dayId);
-  }));
-  el.querySelectorAll('button.add[data-kind="act"]').forEach(b => b.addEventListener('click', e => {
-    const day = e.target.dataset.day;
-    const card = e.target.closest('.day-card');
-    const time = card.querySelector(`input[data-field="time"]`).value.trim();
-    const name = card.querySelector(`input[data-field="name"]`).value.trim();
-    const type = card.querySelector(`select[data-field="type"]`).value;
-    if(!name){ card.querySelector(`input[data-field="name"]`).focus(); return; }
-    const items = (draftItems[day] || []).slice();
-    state.itinerary[day].push({time, name, type, items});
-    delete draftItems[day];
-    delete draftMeta[day];
-    scheduleSave(); renderItinerary();
-  }));
-  el.querySelectorAll('button.del[data-kind="day"]').forEach(b => b.addEventListener('click', e => {
-    const dayId = e.target.dataset.day;
-    if(!confirm('Remove this day and its logged activities and expenses?')) return;
-    DAYS = DAYS.filter(d => d.id !== dayId);
-    state.days = DAYS;
-    delete state.itinerary[dayId];
-    delete state.expenses[dayId];
-    if(activeExpenseDay === dayId) activeExpenseDay = DAYS[0] ? DAYS[0].id : null;
-    scheduleSave(); renderAll();
-  }));
-
-  const addBtn = document.getElementById('nd-add');
-  if(addBtn) addBtn.addEventListener('click', () => {
-    const label = document.getElementById('nd-label').value.trim() || '—';
-    const date = document.getElementById('nd-date').value.trim();
-    const dest = document.getElementById('nd-dest').value;
-    const note = document.getElementById('nd-note').value.trim();
-    if(!date) return;
-    const id = 'custom-' + Date.now();
-    const newDay = {id, label, date, dest};
-    if(note) newDay.label2 = note;
-    DAYS.push(newDay);
-    state.days = DAYS;
-    ensureDayBuckets();
-    scheduleSave(); renderAll();
+    if(!draftItems[d.id]) draftItems[d.id] = [];
+    draftItems[d.id].push({text, price});
+    textInput.value=''; priceInput.value=''; textInput.focus();
+    renderStagedItems(d.id);
+  });
+  document.getElementById('save-act-btn').addEventListener('click', () => {
+    saveActivity(d.id);
   });
 
-  Object.keys(draftItems).forEach(dayId => renderStagedItems(dayId));
+  renderStagedItems(d.id);
 }
+
+function renderStagedItems(dayId){
+  const el = document.getElementById('staged-items');
+  if(!el) return;
+  const items = draftItems[dayId] || [];
+  el.innerHTML = items.map((it,i) => `
+    <div class="exp-row" style="padding:6px 0;">
+      <span class="desc" style="font-size:13px;">${escapeHtml(it.text)}</span>
+      ${it.price ? `<span class="amt" style="font-size:13px;">${fmt(it.price)}</span>` : ''}
+      <button class="del" data-idx="${i}">✕</button>
+    </div>`).join('');
+  el.querySelectorAll('button.del').forEach(b => b.addEventListener('click', e => {
+    draftItems[dayId].splice(+e.target.dataset.idx, 1);
+    renderStagedItems(dayId);
+  }));
+}
+
+function saveActivity(dayId){
+  const time = document.getElementById('f-time').value.trim();
+  const name = document.getElementById('f-name').value.trim();
+  const type = document.getElementById('f-type').value;
+  if(!name){ document.getElementById('f-name').focus(); return; }
+  const items = (draftItems[dayId] || []).slice();
+  const id = 'act-' + Date.now() + '-' + Math.floor(Math.random()*10000);
+  const activity = {id, time, name, type, items};
+  state.itinerary[dayId].push(activity);
+
+  // Auto-log any priced items as expenses for this day.
+  const cat = (ACTIVITY_TYPES[type] || ACTIVITY_TYPES.other).category;
+  items.forEach(it => {
+    if(it.price && it.price > 0){
+      state.expenses[dayId].push({
+        cat,
+        desc: name + (it.text ? ' — ' + it.text : ''),
+        amt: round2(it.price),
+        auto: true,
+        srcActivityId: id
+      });
+    }
+  });
+
+  delete draftItems[dayId];
+  delete draftMeta[dayId];
+  scheduleSave();
+  renderDayStrip(); renderDayExpand();
+  renderExpenseTabs(); renderExpenses(); renderSummary(); updateTotalsBar();
+}
+
+function deleteActivity(dayId, idx){
+  const activity = state.itinerary[dayId][idx];
+  state.itinerary[dayId].splice(idx, 1);
+  if(activity && activity.id){
+    state.expenses[dayId] = state.expenses[dayId].filter(x => x.srcActivityId !== activity.id);
+  }
+  scheduleSave();
+  renderDayStrip(); renderDayExpand();
+  renderExpenseTabs(); renderExpenses(); renderSummary(); updateTotalsBar();
+}
+
+function removeDay(dayId){
+  if(!confirm('Remove this day and its logged activities and expenses?')) return;
+  DAYS = DAYS.filter(d => d.id !== dayId);
+  state.days = DAYS;
+  delete state.itinerary[dayId];
+  delete state.expenses[dayId];
+  if(activeItinDay === dayId) activeItinDay = DAYS[0] ? DAYS[0].id : null;
+  if(activeExpenseDay === dayId) activeExpenseDay = DAYS[0] ? DAYS[0].id : null;
+  scheduleSave();
+  renderAll();
+}
+
+/* ---------- ADD DAY MODAL ---------- */
+function openAddDayModal(){
+  document.getElementById('nd-label').value = '';
+  document.getElementById('nd-date').value = '';
+  document.getElementById('nd-dest').value = 'boracay';
+  document.getElementById('nd-note').value = '';
+  document.getElementById('addday-backdrop').classList.add('open');
+}
+function closeAddDayModal(){
+  document.getElementById('addday-backdrop').classList.remove('open');
+}
+document.getElementById('addday-close').addEventListener('click', closeAddDayModal);
+document.getElementById('addday-backdrop').addEventListener('click', e => {
+  if(e.target.id === 'addday-backdrop') closeAddDayModal();
+});
+document.getElementById('nd-add').addEventListener('click', () => {
+  const label = document.getElementById('nd-label').value.trim() || '—';
+  const date = document.getElementById('nd-date').value.trim();
+  const dest = document.getElementById('nd-dest').value;
+  const note = document.getElementById('nd-note').value.trim();
+  if(!date){ document.getElementById('nd-date').focus(); return; }
+  const id = 'custom-' + Date.now();
+  const newDay = {id, label, date, dest};
+  if(note) newDay.label2 = note;
+  DAYS.push(newDay);
+  state.days = DAYS;
+  ensureDayBuckets();
+  activeItinDay = id;
+  scheduleSave();
+  closeAddDayModal();
+  renderDayStrip(); renderDayExpand();
+});
 
 /* ---------- EXPENSES ---------- */
 function renderExpenseTabs(){
   const el = document.getElementById('day-select');
   el.innerHTML = DAYS.map(d => {
-    const t = state.expenses[d.id].reduce((s,x)=>s+Number(x.amt||0),0);
-    return `<button data-day="${d.id}" class="${d.id===activeExpenseDay?'active':''}">${d.label} ${d.date.split(' ')[1]}${t>0 ? `<br><span style="font-size:10px;">${fmt(t)}</span>` : ''}</button>`;
+    const t = sumBy(state.expenses[d.id], x => x.amt || 0);
+    return `<button data-day="${d.id}" class="${d.id===activeExpenseDay?'active':''}">${d.label} ${d.date.split(' ').pop()}${t>0 ? `<br><span style="font-size:10px;">${fmt(t)}</span>` : ''}</button>`;
   }).join('');
   el.querySelectorAll('button').forEach(b => b.addEventListener('click', e => {
     activeExpenseDay = e.currentTarget.dataset.day;
@@ -744,12 +772,13 @@ function renderExpenseTabs(){
 
 function renderExpenses(){
   const el = document.getElementById('exp-card');
-  const list = state.expenses[activeExpenseDay];
-  const dayTotal = list.reduce((s,x)=>s+Number(x.amt||0),0);
+  if(!activeExpenseDay){ el.innerHTML = '<div class="empty">No days yet</div>'; return; }
+  const list = state.expenses[activeExpenseDay] || [];
+  const dayTotal = sumBy(list, x => x.amt || 0);
   el.innerHTML = `
     ${list.length ? list.map((x,i)=>`
       <div class="exp-row">
-        <span class="cat">${x.cat}</span>
+        <span class="cat ${x.auto?'auto':''}">${x.auto ? 'Planned' : x.cat}</span>
         <span class="desc">${escapeHtml(x.desc)}</span>
         <span class="amt">${fmt(x.amt)}</span>
         <button class="del" data-idx="${i}">✕</button>
@@ -764,14 +793,14 @@ function renderExpenses(){
   `;
   el.querySelectorAll('button.del').forEach(b => b.addEventListener('click', e => {
     state.expenses[activeExpenseDay].splice(+e.target.dataset.idx,1);
-    scheduleSave(); renderExpenses(); renderExpenseTabs(); renderSummary(); updateTotalsBar();
+    scheduleSave(); renderExpenses(); renderExpenseTabs(); renderSummary(); updateTotalsBar(); renderDayStrip(); renderDayExpand();
   }));
   document.getElementById('e-add').addEventListener('click', () => {
     const cat = document.getElementById('e-cat').value;
     const desc = document.getElementById('e-desc').value.trim();
     const amt = parseFloat(document.getElementById('e-amt').value);
     if(!desc || !amt) return;
-    state.expenses[activeExpenseDay].push({cat, desc, amt});
+    state.expenses[activeExpenseDay].push({cat, desc, amt: round2(amt)});
     scheduleSave(); renderExpenses(); renderExpenseTabs(); renderSummary(); updateTotalsBar();
   });
   updateTotalsBar();
@@ -780,9 +809,9 @@ function renderExpenses(){
 function updateTotalsBar(){
   let total = 0, daysWithData = 0;
   DAYS.forEach(d => {
-    const t = state.expenses[d.id].reduce((s,x)=>s+Number(x.amt||0),0);
+    const t = sumBy(state.expenses[d.id], x => x.amt || 0);
     if(t>0) daysWithData++;
-    total += t;
+    total = round2(total + t);
   });
   document.getElementById('trip-total').textContent = fmt(total);
   document.getElementById('days-logged').textContent = daysWithData + '/' + DAYS.length;
@@ -792,33 +821,35 @@ function updateTotalsBar(){
 function renderSummary(){
   const dayEl = document.getElementById('day-totals');
   dayEl.innerHTML = DAYS.length ? DAYS.map(d => {
-    const t = state.expenses[d.id].reduce((s,x)=>s+Number(x.amt||0),0);
+    const t = sumBy(state.expenses[d.id], x => x.amt || 0);
     return `<div class="leg-total"><span>${escapeHtml(d.label)} · ${escapeHtml(d.date)}</span><b>${fmt(t)}</b></div>`;
   }).join('') : '<div class="empty">No days yet</div>';
 
   const legTotals = {};
   const legDates = {};
   DAYS.forEach(d => {
-    const t = state.expenses[d.id].reduce((s,x)=>s+Number(x.amt||0),0);
-    legTotals[d.dest] = (legTotals[d.dest]||0) + t;
-    legDates[d.dest] = legDates[d.dest] ? legDates[d.dest] : [];
+    const t = sumBy(state.expenses[d.id], x => x.amt || 0);
+    legTotals[d.dest] = round2((legTotals[d.dest]||0) + t);
+    legDates[d.dest] = legDates[d.dest] || [];
     legDates[d.dest].push(d.date);
   });
   const legEl = document.getElementById('leg-totals');
   const destKeys = Object.keys(legTotals);
   legEl.innerHTML = destKeys.length ? destKeys.map(k => {
-    const h = legHeading(k);
     const dates = legDates[k];
     const range = dates.length > 1 ? `${dates[0]}–${dates[dates.length-1]}` : dates[0];
-    return `<div class="leg-total"><span>${h.title} (${escapeHtml(range)})</span><b>${fmt(legTotals[k])}</b></div>`;
+    return `<div class="leg-total"><span>${legHeading(k)} (${escapeHtml(range)})</span><b>${fmt(legTotals[k])}</b></div>`;
   }).join('') : '<div class="empty">No days yet</div>';
 
   const catTotals = {};
   CATEGORIES.forEach(c => catTotals[c] = 0);
   let grand = 0;
-  Object.values(state.expenses).forEach(list => list.forEach(x => { catTotals[x.cat] = (catTotals[x.cat]||0) + Number(x.amt||0); grand += Number(x.amt||0); }));
+  Object.values(state.expenses).forEach(list => (list||[]).forEach(x => {
+    catTotals[x.cat] = round2((catTotals[x.cat]||0) + Number(x.amt||0));
+    grand = round2(grand + Number(x.amt||0));
+  }));
   const catEl = document.getElementById('cat-bars');
-  if(grand === 0){
+  if(grand <= 0){
     catEl.innerHTML = '<div class="empty">Log some expenses to see the breakdown</div>';
   } else {
     catEl.innerHTML = CATEGORIES.filter(c => catTotals[c] > 0).map(c => {
@@ -830,12 +861,11 @@ function renderSummary(){
     }).join('');
   }
 
-  // budget
   const budgetInput = document.getElementById('budget-input');
   if(document.activeElement !== budgetInput) budgetInput.value = state.budget || '';
   const statusEl = document.getElementById('budget-status');
   if(state.budget){
-    const remaining = state.budget - grand;
+    const remaining = round2(state.budget - grand);
     const over = remaining < 0;
     statusEl.innerHTML = over
       ? `<span style="color:var(--rust-deep)">${fmt(Math.abs(remaining))} over budget</span>`
@@ -859,10 +889,6 @@ document.querySelectorAll('nav.tabs button').forEach(b => {
     document.getElementById('view-' + b.dataset.view).classList.add('active');
   });
 });
-
-function escapeHtml(s){
-  return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
-}
 
 load();
 </script>
