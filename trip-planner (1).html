@@ -1,0 +1,840 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Boracay → Cebu Trip</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#FAF8F3;
+    --ink:#1B2A2E;
+    --ink-soft:#5B6B6E;
+    --line:#E4DFD3;
+    --card:#FFFFFF;
+    --teal:#2A9D8F;
+    --teal-deep:#1F7A70;
+    --teal-tint:#E7F3F1;
+    --rust:#B5652B;
+    --rust-deep:#8F4E1F;
+    --rust-tint:#F5EAE0;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'IBM Plex Sans', sans-serif;
+    -webkit-font-smoothing:antialiased;
+    padding-bottom:48px;
+  }
+  .wrap{max-width:520px;margin:0 auto;padding:0 18px;}
+
+  /* Header ticket strip */
+  header{
+    background:var(--ink);
+    color:var(--bg);
+    padding:22px 18px 26px;
+    position:relative;
+  }
+  header .route{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12px;
+    letter-spacing:0.06em;
+    color:#9FB2B4;
+    margin-bottom:6px;
+  }
+  header h1{
+    font-family:'Fraunces', serif;
+    font-weight:600;
+    font-size:30px;
+    line-height:1.05;
+    margin:0 0 10px;
+  }
+  header .dates{
+    display:flex;
+    gap:18px;
+    font-size:13px;
+    color:#C8D3D2;
+  }
+  header .dates b{color:var(--bg);font-weight:600;}
+
+  /* Tabs */
+  nav.tabs{
+    display:flex;
+    max-width:520px;
+    margin:0 auto;
+    border-bottom:1px solid var(--line);
+    background:var(--bg);
+    position:sticky;
+    top:0;
+    z-index:5;
+  }
+  nav.tabs button{
+    flex:1;
+    padding:14px 8px;
+    background:none;
+    border:none;
+    font-family:'IBM Plex Sans', sans-serif;
+    font-size:14px;
+    font-weight:500;
+    color:var(--ink-soft);
+    cursor:pointer;
+    border-bottom:2px solid transparent;
+  }
+  nav.tabs button.active{
+    color:var(--ink);
+    border-bottom:2px solid var(--ink);
+  }
+
+  main{padding-top:18px;}
+  .view{display:none;}
+  .view.active{display:block;}
+
+  /* Leg heading */
+  .leg{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    margin:22px 0 10px;
+  }
+  .leg:first-child{margin-top:0;}
+  .leg .dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+  .leg.boracay .dot{background:var(--teal);}
+  .leg.cebu .dot{background:var(--rust);}
+  .leg h2{
+    font-family:'Fraunces', serif;
+    font-size:17px;
+    font-weight:600;
+    margin:0;
+  }
+  .leg span{font-size:12px;color:var(--ink-soft);}
+
+  /* Day card (ticket stub) */
+  .day-card{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:10px;
+    margin-bottom:14px;
+    overflow:hidden;
+  }
+  .day-card .day-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:12px 16px;
+    border-bottom:1px dashed var(--line);
+  }
+  .day-card.boracay .day-head{background:var(--teal-tint);}
+  .day-card.cebu .day-head{background:var(--rust-tint);}
+  .day-head .day-name{font-weight:600;font-size:14px;}
+  .day-head .day-date{font-size:12px;color:var(--ink-soft);font-family:'IBM Plex Mono',monospace;}
+
+  .activities{padding:6px 16px 4px;}
+  .activity{
+    display:flex;
+    gap:12px;
+    padding:10px 0;
+    border-bottom:1px solid var(--line);
+  }
+  .activity:last-child{border-bottom:none;}
+  .activity .time{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12px;
+    color:var(--ink-soft);
+    width:50px;
+    flex-shrink:0;
+    padding-top:1px;
+  }
+  .activity .body{flex:1;}
+  .activity .name-row{display:flex;align-items:center;gap:7px;flex-wrap:wrap;}
+  .activity .name{font-size:14px;font-weight:500;}
+  .activity .type-badge{
+    font-size:9.5px;
+    letter-spacing:0.03em;
+    color:var(--ink-soft);
+    background:var(--bg);
+    border:1px solid var(--line);
+    border-radius:4px;
+    padding:2px 6px;
+    flex-shrink:0;
+  }
+  .activity .note{font-size:12px;color:var(--ink-soft);margin-top:3px;}
+  .activity .price{font-size:12px;color:var(--ink);font-weight:500;margin-top:2px;font-family:'IBM Plex Mono', monospace;}
+  .activity .del{
+    background:none;border:none;color:var(--ink-soft);
+    cursor:pointer;font-size:16px;line-height:1;padding:2px 4px;
+    flex-shrink:0;
+  }
+  .empty{font-size:13px;color:var(--ink-soft);padding:12px 0;font-style:italic;}
+
+  .add-row{
+    display:flex;
+    flex-wrap:wrap;
+    gap:6px;
+    padding:10px 16px 14px;
+  }
+  .add-row input, .add-row select{
+    border:1px solid var(--line);
+    border-radius:6px;
+    padding:8px 9px;
+    font-size:13px;
+    font-family:inherit;
+    background:var(--bg);
+    color:var(--ink);
+  }
+  .add-row input:focus, .add-row select:focus{outline:2px solid var(--ink); outline-offset:1px;}
+  .add-row .t-time{width:60px;}
+  .add-row .t-name{flex:1 1 100px;min-width:0;}
+  .add-row .t-type{width:118px;flex-shrink:0;}
+  .add-row .t-detail{flex:1 1 140px;min-width:0;}
+  .add-row .t-price{width:92px;flex-shrink:0;}
+  .add-row button.add{
+    border:none;
+    background:var(--ink);
+    color:var(--bg);
+    border-radius:6px;
+    padding:0 13px;
+    font-size:14px;
+    cursor:pointer;
+    flex-shrink:0;
+  }
+  .add-row .full-row{display:flex;gap:6px;width:100%;flex-wrap:wrap;}
+  .staged-items{width:100%;}
+  .staged-items:not(:empty){
+    border-top:1px dashed var(--line);
+    margin-top:2px;
+    padding-top:2px;
+  }
+
+
+  /* Expenses */
+  .totals-bar{
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+    background:var(--ink);
+    color:var(--bg);
+    border-radius:10px;
+    padding:16px 18px;
+    margin-bottom:16px;
+  }
+  .totals-bar .label{font-size:12px;color:#B9C6C6;}
+  .totals-bar .amount{font-family:'Fraunces', serif;font-size:26px;font-weight:600;}
+
+  .day-select{
+    display:flex;
+    gap:6px;
+    overflow-x:auto;
+    padding-bottom:12px;
+    margin-bottom:4px;
+  }
+  .day-select button{
+    flex-shrink:0;
+    border:1px solid var(--line);
+    background:var(--card);
+    padding:7px 12px;
+    border-radius:20px;
+    font-size:12px;
+    font-family:'IBM Plex Mono', monospace;
+    color:var(--ink-soft);
+    cursor:pointer;
+  }
+  .day-select button.active{
+    background:var(--ink);
+    color:var(--bg);
+    border-color:var(--ink);
+  }
+
+  .exp-card{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:14px 16px;
+    margin-bottom:14px;
+  }
+  .exp-row{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:9px 0;
+    border-bottom:1px solid var(--line);
+    gap:10px;
+  }
+  .exp-row:last-of-type{border-bottom:none;}
+  .exp-row .cat{
+    font-size:10px;
+    letter-spacing:0.03em;
+    color:var(--ink-soft);
+    background:var(--bg);
+    border:1px solid var(--line);
+    border-radius:4px;
+    padding:2px 6px;
+    flex-shrink:0;
+  }
+  .exp-row .desc{flex:1;font-size:14px;min-width:0;}
+  .exp-row .amt{font-family:'IBM Plex Mono', monospace;font-size:14px;font-weight:500;}
+  .exp-row .del{background:none;border:none;color:var(--ink-soft);cursor:pointer;font-size:16px;padding:0 2px;}
+  .day-total{
+    display:flex;
+    justify-content:space-between;
+    padding-top:10px;
+    margin-top:2px;
+    font-size:13px;
+    color:var(--ink-soft);
+  }
+
+  .exp-add{
+    display:flex;
+    flex-wrap:wrap;
+    gap:6px;
+    margin-top:12px;
+  }
+  .exp-add select, .exp-add input{
+    border:1px solid var(--line);
+    border-radius:6px;
+    padding:8px 9px;
+    font-size:13px;
+    font-family:inherit;
+    background:var(--bg);
+    color:var(--ink);
+  }
+  .exp-add .e-desc{flex:1 1 120px;min-width:0;}
+  .exp-add .e-amt{width:90px;}
+  .exp-add button.add{
+    border:none;background:var(--ink);color:var(--bg);
+    border-radius:6px;padding:0 13px;font-size:14px;cursor:pointer;
+  }
+
+  /* Summary */
+  .sum-card{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:18px;
+    margin-bottom:14px;
+  }
+  .sum-card h3{
+    font-family:'Fraunces', serif;
+    font-size:15px;
+    margin:0 0 12px;
+  }
+  .bar-row{margin-bottom:10px;}
+  .bar-row .bar-top{
+    display:flex;
+    justify-content:space-between;
+    font-size:12px;
+    margin-bottom:4px;
+    color:var(--ink-soft);
+  }
+  .bar-track{
+    height:7px;
+    background:var(--line);
+    border-radius:4px;
+    overflow:hidden;
+  }
+  .bar-fill{height:100%;border-radius:4px;}
+  .leg-total{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:10px 0;
+    border-bottom:1px solid var(--line);
+  }
+  .leg-total:last-child{border-bottom:none;}
+  .budget-row{
+    display:flex;
+    gap:8px;
+    align-items:center;
+    margin-top:10px;
+  }
+  .budget-row input{
+    border:1px solid var(--line);
+    border-radius:6px;
+    padding:8px 9px;
+    font-size:13px;
+    width:110px;
+    font-family:inherit;
+    background:var(--bg);
+    color:var(--ink);
+  }
+  .budget-row label{font-size:12px;color:var(--ink-soft);}
+
+  footer.hint{
+    max-width:520px;margin:26px auto 0;padding:0 18px;
+    font-size:11.5px;color:var(--ink-soft);line-height:1.5;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="route">MPH → CEB &nbsp;·&nbsp; DEC 06 – DEC 11, 2026</div>
+  <h1>Boracay → Cebu</h1>
+  <div class="dates"><span><b>Leg 1</b> Boracay, Dec 6–9</span><span><b>Leg 2</b> Cebu, Dec 9–11</span></div>
+</header>
+
+<nav class="tabs">
+  <button data-view="itinerary" class="active">Itinerary</button>
+  <button data-view="expenses">Expenses</button>
+  <button data-view="summary">Summary</button>
+</nav>
+
+<div class="wrap">
+<main>
+
+  <!-- ITINERARY -->
+  <section id="view-itinerary" class="view active"></section>
+
+  <!-- EXPENSES -->
+  <section id="view-expenses" class="view">
+    <div class="totals-bar">
+      <div><div class="label">Trip total so far</div><div class="amount" id="trip-total">₱0</div></div>
+      <div style="text-align:right"><div class="label">Days logged</div><div class="amount" id="days-logged" style="font-size:20px">0/6</div></div>
+    </div>
+    <div class="day-select" id="day-select"></div>
+    <div class="exp-card" id="exp-card"></div>
+  </section>
+
+  <!-- SUMMARY -->
+  <section id="view-summary" class="view">
+    <div class="sum-card">
+      <h3>By day</h3>
+      <div id="day-totals"></div>
+    </div>
+    <div class="sum-card">
+      <h3>By destination</h3>
+      <div id="leg-totals"></div>
+    </div>
+    <div class="sum-card">
+      <h3>By category</h3>
+      <div id="cat-bars"></div>
+    </div>
+    <div class="sum-card">
+      <h3>Budget</h3>
+      <div class="budget-row">
+        <label>Set total budget</label>
+        <input type="number" id="budget-input" placeholder="e.g. 20000">
+        <span style="font-size:12px;color:var(--ink-soft)">PHP</span>
+      </div>
+      <div id="budget-status" style="margin-top:10px;font-size:13px;"></div>
+    </div>
+  </section>
+
+</main>
+</div>
+
+<footer class="hint">Tap the browser's share icon and choose "Add to Home Screen" to open this like a regular app. Everything you enter is saved automatically on this device.</footer>
+
+<script>
+const DEFAULT_DAYS = [
+  {id:'d6',  label:'Sun',  date:'Dec 6',  dest:'boracay'},
+  {id:'d7',  label:'Mon',  date:'Dec 7',  dest:'boracay'},
+  {id:'d8',  label:'Tue',  date:'Dec 8',  dest:'boracay'},
+  {id:'d9',  label:'Wed',  date:'Dec 9',  dest:'transit', label2:'Boracay → Cebu'},
+  {id:'d10', label:'Thu',  date:'Dec 10', dest:'cebu'},
+  {id:'d11', label:'Fri',  date:'Dec 11', dest:'cebu'},
+];
+const DEST_OPTIONS = [
+  {value:'boracay', label:'Boracay'},
+  {value:'cebu', label:'Cebu'},
+  {value:'transit', label:'Transit'},
+  {value:'other', label:'Other'},
+];
+const ACTIVITY_TYPES = {
+  restaurant:    {label:'Restaurant',     detailLabel:'Food to order',   priceLabel:'Tentative price'},
+  beach:         {label:'Beach',          detailLabel:'Note',            priceLabel:'Tentative price'},
+  transportation:{label:'Transportation', detailLabel:'Type of transport', priceLabel:'Fee'},
+  sightseeing:   {label:'Sightseeing',    detailLabel:'Note',            priceLabel:'Tentative price'},
+  accommodation: {label:'Accommodation',  detailLabel:'Note',            priceLabel:'Tentative price'},
+  shopping:      {label:'Shopping',       detailLabel:'What to buy',     priceLabel:'Tentative price'},
+  other:         {label:'Other',          detailLabel:'Note',            priceLabel:'Tentative price'},
+};
+const CATEGORIES = ['Transport','Food','Accommodation','Activities','Shopping','Other'];
+const STORAGE_KEY = 'trip-boracay-cebu';
+
+let DAYS = DEFAULT_DAYS.slice();
+
+let state = {
+  days: null,       // set on load: array of {id,label,date,dest,label2}
+  itinerary: {},    // { d6: [{time,name,note}] }
+  expenses: {},     // { d6: [{cat,desc,amt}] }
+  budget: null
+};
+
+function ensureDayBuckets(){
+  DAYS.forEach(d => { state.itinerary[d.id] = state.itinerary[d.id] || []; state.expenses[d.id] = state.expenses[d.id] || []; });
+}
+ensureDayBuckets();
+
+let activeExpenseDay = DAYS[0].id;
+let saveTimer = null;
+let draftItems = {};   // dayId -> [{text, price}]  (staged, unsaved lines for the activity being built)
+let draftMeta = {};    // dayId -> {time, name, type}
+
+function fmt(n){ return '₱' + Number(n||0).toLocaleString('en-PH', {maximumFractionDigits:0}); }
+
+function scheduleSave(){
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(async () => {
+    try{ await window.storage.set(STORAGE_KEY, JSON.stringify(state), false); }
+    catch(e){ console.error('save failed', e); }
+  }, 250);
+}
+
+async function load(){
+  try{
+    const res = await window.storage.get(STORAGE_KEY, false);
+    if(res && res.value){
+      const parsed = JSON.parse(res.value);
+      state = Object.assign(state, parsed);
+    }
+  }catch(e){ /* no saved data yet */ }
+  DAYS = (state.days && state.days.length) ? state.days : DEFAULT_DAYS.slice();
+  state.days = DAYS;
+  ensureDayBuckets();
+  activeExpenseDay = DAYS[0] ? DAYS[0].id : null;
+  renderAll();
+}
+
+function renderAll(){
+  renderItinerary();
+  renderExpenseTabs();
+  renderExpenses();
+  renderSummary();
+}
+
+/* ---------- ITINERARY ---------- */
+function legHeading(dest){
+  if(dest==='boracay') return {title:'Boracay', cls:'boracay'};
+  if(dest==='cebu') return {title:'Cebu', cls:'cebu'};
+  if(dest==='transit') return {title:'Transit day', cls:'boracay'};
+  return {title:'Other', cls:'cebu'};
+}
+
+function getDraftMeta(dayId){
+  if(!draftMeta[dayId]) draftMeta[dayId] = {time:'', name:'', type:'restaurant'};
+  return draftMeta[dayId];
+}
+
+function getItems(a){
+  if(a.items) return a.items;
+  if(a.detail) return [{text:a.detail, price:a.price||null}]; // backward compatibility
+  return [];
+}
+
+function renderStagedItems(dayId){
+  const el = document.getElementById('staged-'+dayId);
+  if(!el) return;
+  const items = draftItems[dayId] || [];
+  el.innerHTML = items.map((it,i) => `
+    <div class="exp-row" style="padding:6px 0;">
+      <span class="desc" style="font-size:13px;">${escapeHtml(it.text)}</span>
+      ${it.price ? `<span class="amt" style="font-size:13px;">${fmt(it.price)}</span>` : ''}
+      <button class="del" data-day="${dayId}" data-idx="${i}" data-kind="staged">✕</button>
+    </div>`).join('');
+  el.querySelectorAll('button.del[data-kind="staged"]').forEach(b => b.addEventListener('click', e => {
+    draftItems[dayId].splice(+e.target.dataset.idx, 1);
+    renderStagedItems(dayId);
+  }));
+}
+
+function renderItinerary(){
+  const el = document.getElementById('view-itinerary');
+  let html = '';
+  let currentLeg = null;
+  DAYS.forEach(d => {
+    if(d.dest !== currentLeg){
+      currentLeg = d.dest;
+      const h = legHeading(d.dest);
+      html += `<div class="leg ${h.cls}"><div class="dot"></div><h2>${h.title}</h2></div>`;
+    }
+    const cardClass = d.dest==='cebu' ? 'cebu' : 'boracay';
+    const acts = state.itinerary[d.id] || [];
+    html += `<div class="day-card ${cardClass}">
+      <div class="day-head">
+        <span class="day-name">${escapeHtml(d.label)}${d.label2 ? ' · '+escapeHtml(d.label2) : ''}</span>
+        <span style="display:flex;align-items:center;gap:8px">
+          <span class="day-date">${escapeHtml(d.date)}</span>
+          <button class="del" data-day="${d.id}" data-kind="day" title="Remove this day">✕</button>
+        </span>
+      </div>
+      <div class="activities" id="acts-${d.id}">
+        ${acts.length ? acts.map((a,i) => {
+          const t = ACTIVITY_TYPES[a.type] || ACTIVITY_TYPES.other;
+          const items = getItems(a);
+          const subtotal = items.reduce((s,it)=>s+Number(it.price||0),0);
+          return `
+          <div class="activity">
+            <div class="time">${a.time||''}</div>
+            <div class="body">
+              <div class="name-row"><span class="name">${escapeHtml(a.name)}</span><span class="type-badge">${t.label}</span></div>
+              ${items.length ? `
+                <div class="note" style="margin-top:4px;">
+                  <div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.03em;color:var(--ink-soft);margin-bottom:2px;">${escapeHtml(t.detailLabel)}</div>
+                  ${items.map(it => `<div style="display:flex;justify-content:space-between;gap:8px;"><span>${escapeHtml(it.text)}</span>${it.price?`<span style="font-family:'IBM Plex Mono',monospace;">${fmt(it.price)}</span>`:''}</div>`).join('')}
+                </div>` : ''}
+              ${subtotal>0 ? `<div class="price">Subtotal: ~${fmt(subtotal)}</div>` : ''}
+            </div>
+            <button class="del" data-day="${d.id}" data-idx="${i}" data-kind="act">✕</button>
+          </div>`;
+        }).join('') : '<div class="empty">Nothing planned yet</div>'}
+      </div>
+      <div class="add-row">
+        <div class="full-row">
+          <input class="t-time" type="text" placeholder="9:00" value="${escapeHtml(getDraftMeta(d.id).time)}" data-day="${d.id}" data-field="time">
+          <input class="t-name" type="text" placeholder="Add activity" value="${escapeHtml(getDraftMeta(d.id).name)}" data-day="${d.id}" data-field="name">
+          <select class="t-type" data-day="${d.id}" data-field="type">
+            ${Object.entries(ACTIVITY_TYPES).map(([k,v])=>`<option value="${k}" ${getDraftMeta(d.id).type===k?'selected':''}>${v.label}</option>`).join('')}
+          </select>
+        </div>
+        <div class="full-row">
+          <input class="t-detail" type="text" placeholder="${ACTIVITY_TYPES[getDraftMeta(d.id).type].detailLabel}" id="item-text-${d.id}">
+          <input class="t-price" type="number" placeholder="Price (optional)" id="item-price-${d.id}">
+          <button class="add" data-day="${d.id}" data-kind="line">+ line</button>
+        </div>
+        <div class="staged-items" id="staged-${d.id}"></div>
+        <div class="full-row">
+          <button class="add" data-day="${d.id}" data-kind="act" style="flex:1;">Save activity</button>
+        </div>
+      </div>
+    </div>`;
+  });
+
+  if(!DAYS.length){
+    html += '<div class="empty">No days yet — add your first one below</div>';
+  }
+
+  html += `
+    <div class="day-card" style="border-style:dashed;">
+      <div class="day-head"><span class="day-name">Add a day</span></div>
+      <div class="add-row" style="flex-wrap:wrap;">
+        <input class="t-time" style="width:64px" type="text" placeholder="Fri" id="nd-label">
+        <input class="t-time" style="width:88px" type="text" placeholder="Dec 12" id="nd-date">
+        <select id="nd-dest" style="border:1px solid var(--line);border-radius:6px;padding:8px 9px;font-size:13px;background:var(--bg);color:var(--ink);">
+          ${DEST_OPTIONS.map(o=>`<option value="${o.value}">${o.label}</option>`).join('')}
+        </select>
+        <input class="t-name" type="text" placeholder="Note (optional)" id="nd-note">
+        <button class="add" id="nd-add">+</button>
+      </div>
+    </div>
+  `;
+
+  el.innerHTML = html;
+
+  el.querySelectorAll('button.del[data-kind="act"]').forEach(b => b.addEventListener('click', e => {
+    const day = e.target.dataset.day, idx = +e.target.dataset.idx;
+    state.itinerary[day].splice(idx,1);
+    scheduleSave(); renderItinerary();
+  }));
+  el.querySelectorAll('select.t-type').forEach(sel => {
+    sel.addEventListener('change', () => {
+      const dayId = sel.dataset.day;
+      getDraftMeta(dayId).type = sel.value;
+      const card = sel.closest('.day-card');
+      const t = ACTIVITY_TYPES[sel.value] || ACTIVITY_TYPES.other;
+      card.querySelector('.t-detail').placeholder = t.detailLabel;
+    });
+  });
+  el.querySelectorAll('input.t-time[data-field="time"]').forEach(inp => inp.addEventListener('input', () => {
+    getDraftMeta(inp.dataset.day).time = inp.value;
+  }));
+  el.querySelectorAll('input.t-name[data-field="name"]').forEach(inp => inp.addEventListener('input', () => {
+    getDraftMeta(inp.dataset.day).name = inp.value;
+  }));
+  el.querySelectorAll('button.add[data-kind="line"]').forEach(b => b.addEventListener('click', e => {
+    const dayId = e.target.dataset.day;
+    const textInput = document.getElementById('item-text-'+dayId);
+    const priceInput = document.getElementById('item-price-'+dayId);
+    const text = textInput.value.trim();
+    const price = priceInput.value ? parseFloat(priceInput.value) : null;
+    if(!text) return;
+    if(!draftItems[dayId]) draftItems[dayId] = [];
+    draftItems[dayId].push({text, price});
+    textInput.value = ''; priceInput.value = '';
+    textInput.focus();
+    renderStagedItems(dayId);
+  }));
+  el.querySelectorAll('button.add[data-kind="act"]').forEach(b => b.addEventListener('click', e => {
+    const day = e.target.dataset.day;
+    const card = e.target.closest('.day-card');
+    const time = card.querySelector(`input[data-field="time"]`).value.trim();
+    const name = card.querySelector(`input[data-field="name"]`).value.trim();
+    const type = card.querySelector(`select[data-field="type"]`).value;
+    if(!name){ card.querySelector(`input[data-field="name"]`).focus(); return; }
+    const items = (draftItems[day] || []).slice();
+    state.itinerary[day].push({time, name, type, items});
+    delete draftItems[day];
+    delete draftMeta[day];
+    scheduleSave(); renderItinerary();
+  }));
+  el.querySelectorAll('button.del[data-kind="day"]').forEach(b => b.addEventListener('click', e => {
+    const dayId = e.target.dataset.day;
+    if(!confirm('Remove this day and its logged activities and expenses?')) return;
+    DAYS = DAYS.filter(d => d.id !== dayId);
+    state.days = DAYS;
+    delete state.itinerary[dayId];
+    delete state.expenses[dayId];
+    if(activeExpenseDay === dayId) activeExpenseDay = DAYS[0] ? DAYS[0].id : null;
+    scheduleSave(); renderAll();
+  }));
+
+  const addBtn = document.getElementById('nd-add');
+  if(addBtn) addBtn.addEventListener('click', () => {
+    const label = document.getElementById('nd-label').value.trim() || '—';
+    const date = document.getElementById('nd-date').value.trim();
+    const dest = document.getElementById('nd-dest').value;
+    const note = document.getElementById('nd-note').value.trim();
+    if(!date) return;
+    const id = 'custom-' + Date.now();
+    const newDay = {id, label, date, dest};
+    if(note) newDay.label2 = note;
+    DAYS.push(newDay);
+    state.days = DAYS;
+    ensureDayBuckets();
+    scheduleSave(); renderAll();
+  });
+
+  Object.keys(draftItems).forEach(dayId => renderStagedItems(dayId));
+}
+
+/* ---------- EXPENSES ---------- */
+function renderExpenseTabs(){
+  const el = document.getElementById('day-select');
+  el.innerHTML = DAYS.map(d => {
+    const t = state.expenses[d.id].reduce((s,x)=>s+Number(x.amt||0),0);
+    return `<button data-day="${d.id}" class="${d.id===activeExpenseDay?'active':''}">${d.label} ${d.date.split(' ')[1]}${t>0 ? `<br><span style="font-size:10px;">${fmt(t)}</span>` : ''}</button>`;
+  }).join('');
+  el.querySelectorAll('button').forEach(b => b.addEventListener('click', e => {
+    activeExpenseDay = e.currentTarget.dataset.day;
+    renderExpenseTabs(); renderExpenses();
+  }));
+}
+
+function renderExpenses(){
+  const el = document.getElementById('exp-card');
+  const list = state.expenses[activeExpenseDay];
+  const dayTotal = list.reduce((s,x)=>s+Number(x.amt||0),0);
+  el.innerHTML = `
+    ${list.length ? list.map((x,i)=>`
+      <div class="exp-row">
+        <span class="cat">${x.cat}</span>
+        <span class="desc">${escapeHtml(x.desc)}</span>
+        <span class="amt">${fmt(x.amt)}</span>
+        <button class="del" data-idx="${i}">✕</button>
+      </div>`).join('') : '<div class="empty">No expenses logged for this day</div>'}
+    <div class="day-total"><span>Day total</span><span>${fmt(dayTotal)}</span></div>
+    <div class="exp-add">
+      <select id="e-cat">${CATEGORIES.map(c=>`<option value="${c}">${c}</option>`).join('')}</select>
+      <input class="e-desc" id="e-desc" type="text" placeholder="Description">
+      <input class="e-amt" id="e-amt" type="number" placeholder="Amount">
+      <button class="add" id="e-add">Add</button>
+    </div>
+  `;
+  el.querySelectorAll('button.del').forEach(b => b.addEventListener('click', e => {
+    state.expenses[activeExpenseDay].splice(+e.target.dataset.idx,1);
+    scheduleSave(); renderExpenses(); renderExpenseTabs(); renderSummary(); updateTotalsBar();
+  }));
+  document.getElementById('e-add').addEventListener('click', () => {
+    const cat = document.getElementById('e-cat').value;
+    const desc = document.getElementById('e-desc').value.trim();
+    const amt = parseFloat(document.getElementById('e-amt').value);
+    if(!desc || !amt) return;
+    state.expenses[activeExpenseDay].push({cat, desc, amt});
+    scheduleSave(); renderExpenses(); renderExpenseTabs(); renderSummary(); updateTotalsBar();
+  });
+  updateTotalsBar();
+}
+
+function updateTotalsBar(){
+  let total = 0, daysWithData = 0;
+  DAYS.forEach(d => {
+    const t = state.expenses[d.id].reduce((s,x)=>s+Number(x.amt||0),0);
+    if(t>0) daysWithData++;
+    total += t;
+  });
+  document.getElementById('trip-total').textContent = fmt(total);
+  document.getElementById('days-logged').textContent = daysWithData + '/' + DAYS.length;
+}
+
+/* ---------- SUMMARY ---------- */
+function renderSummary(){
+  const dayEl = document.getElementById('day-totals');
+  dayEl.innerHTML = DAYS.length ? DAYS.map(d => {
+    const t = state.expenses[d.id].reduce((s,x)=>s+Number(x.amt||0),0);
+    return `<div class="leg-total"><span>${escapeHtml(d.label)} · ${escapeHtml(d.date)}</span><b>${fmt(t)}</b></div>`;
+  }).join('') : '<div class="empty">No days yet</div>';
+
+  const legTotals = {};
+  const legDates = {};
+  DAYS.forEach(d => {
+    const t = state.expenses[d.id].reduce((s,x)=>s+Number(x.amt||0),0);
+    legTotals[d.dest] = (legTotals[d.dest]||0) + t;
+    legDates[d.dest] = legDates[d.dest] ? legDates[d.dest] : [];
+    legDates[d.dest].push(d.date);
+  });
+  const legEl = document.getElementById('leg-totals');
+  const destKeys = Object.keys(legTotals);
+  legEl.innerHTML = destKeys.length ? destKeys.map(k => {
+    const h = legHeading(k);
+    const dates = legDates[k];
+    const range = dates.length > 1 ? `${dates[0]}–${dates[dates.length-1]}` : dates[0];
+    return `<div class="leg-total"><span>${h.title} (${escapeHtml(range)})</span><b>${fmt(legTotals[k])}</b></div>`;
+  }).join('') : '<div class="empty">No days yet</div>';
+
+  const catTotals = {};
+  CATEGORIES.forEach(c => catTotals[c] = 0);
+  let grand = 0;
+  Object.values(state.expenses).forEach(list => list.forEach(x => { catTotals[x.cat] = (catTotals[x.cat]||0) + Number(x.amt||0); grand += Number(x.amt||0); }));
+  const catEl = document.getElementById('cat-bars');
+  if(grand === 0){
+    catEl.innerHTML = '<div class="empty">Log some expenses to see the breakdown</div>';
+  } else {
+    catEl.innerHTML = CATEGORIES.filter(c => catTotals[c] > 0).map(c => {
+      const pct = Math.round((catTotals[c]/grand)*100);
+      return `<div class="bar-row">
+        <div class="bar-top"><span>${c}</span><span>${fmt(catTotals[c])} · ${pct}%</span></div>
+        <div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:var(--teal)"></div></div>
+      </div>`;
+    }).join('');
+  }
+
+  // budget
+  const budgetInput = document.getElementById('budget-input');
+  if(document.activeElement !== budgetInput) budgetInput.value = state.budget || '';
+  const statusEl = document.getElementById('budget-status');
+  if(state.budget){
+    const remaining = state.budget - grand;
+    const over = remaining < 0;
+    statusEl.innerHTML = over
+      ? `<span style="color:var(--rust-deep)">${fmt(Math.abs(remaining))} over budget</span>`
+      : `<span style="color:var(--teal-deep)">${fmt(remaining)} remaining</span> of ${fmt(state.budget)}`;
+  } else {
+    statusEl.innerHTML = '';
+  }
+}
+
+document.getElementById('budget-input').addEventListener('input', e => {
+  state.budget = e.target.value ? parseFloat(e.target.value) : null;
+  scheduleSave(); renderSummary();
+});
+
+/* ---------- TABS ---------- */
+document.querySelectorAll('nav.tabs button').forEach(b => {
+  b.addEventListener('click', () => {
+    document.querySelectorAll('nav.tabs button').forEach(x=>x.classList.remove('active'));
+    document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+    document.getElementById('view-' + b.dataset.view).classList.add('active');
+  });
+});
+
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+
+load();
+</script>
+</body>
+</html>
