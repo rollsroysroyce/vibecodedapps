@@ -111,7 +111,7 @@
     border:1px solid var(--line);
     background:var(--card);
     border-radius:12px;
-    padding:9px 15px;
+    padding:9px 12px;
     cursor:pointer;
     min-width:56px;
     box-shadow:var(--shadow);
@@ -119,7 +119,7 @@
   }
   .day-chip:active{transform:scale(0.96);}
   .day-chip .dow{font-size:10px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.04em;}
-  .day-chip .num{font-family:'Fraunces',serif;font-size:16px;font-weight:600;line-height:1;}
+  .day-chip .num{font-family:'Fraunces',serif;font-size:14px;font-weight:600;line-height:1.2;white-space:nowrap;}
   .day-chip .amt{font-size:9px;font-family:'IBM Plex Mono',monospace;color:var(--ink-soft);}
   .day-chip.boracay{border-color:var(--teal);}
   .day-chip.cebu{border-color:var(--rust);}
@@ -402,9 +402,11 @@
   <div class="modal-sheet">
     <div class="modal-head"><span id="am-title">Add activity</span><button class="modal-close" id="am-close">✕</button></div>
     <div class="modal-body">
+      <label>Time</label>
       <div class="row3">
-        <div class="grow"><label>Time</label><input type="text" id="am-time" placeholder="9:00"></div>
-        <div class="small"><label>&nbsp;</label><select id="am-ampm"><option>AM</option><option>PM</option></select></div>
+        <div class="small"><select id="am-hour"></select></div>
+        <div class="small"><select id="am-minute"></select></div>
+        <div class="small"><select id="am-ampm"><option>AM</option><option>PM</option></select></div>
       </div>
       <label>Activity</label>
       <input type="text" id="am-name" placeholder="e.g. Lunch at Halo Grill">
@@ -556,7 +558,7 @@ document.getElementById('imp-btn').addEventListener('click', () => {
   state = Object.assign({days:null, trip:{title:'Trip',route:''}, itinerary:{}, expenses:{}, budget:null}, incoming);
   state.trip = Object.assign({title:'Trip', route:''}, incoming.trip || {});
   DAYS = (state.days && state.days.length) ? state.days : DEFAULT_DAYS.slice();
-  state.days = DAYS;
+  sortDays();
   ensureDayBuckets();
   activeItinDay = DAYS[0] ? DAYS[0].id : null;
   activeExpenseDay = DAYS[0] ? DAYS[0].id : null;
@@ -575,6 +577,8 @@ function parseTimeToMinutes(str, ampm){
   if(ampm === 'PM') h += 12;
   return h*60+min;
 }
+function pad2(n){ return String(n).padStart(2,'0'); }
+function roundToNearest5(m){ return Math.min(55, Math.round(m/5)*5); }
 function sortActivities(dayId){
   state.itinerary[dayId].sort((a,b) => {
     const av = (a.timeSort===undefined||a.timeSort===null) ? Infinity : a.timeSort;
@@ -610,12 +614,14 @@ async function load(){
     }
   }catch(e){ /* no saved data yet */ }
   DAYS = (state.days && state.days.length) ? state.days : DEFAULT_DAYS.slice();
-  state.days = DAYS;
+  sortDays();
   ensureDayBuckets();
   activeExpenseDay = DAYS[0] ? DAYS[0].id : null;
   activeItinDay = DAYS[0] ? DAYS[0].id : null;
   document.getElementById('nd-dest').innerHTML = DEST_OPTIONS.map(o=>`<option value="${o.value}">${o.label}</option>`).join('');
   document.getElementById('am-type').innerHTML = Object.entries(ACTIVITY_TYPES).map(([k,v])=>`<option value="${k}">${v.label}</option>`).join('');
+  document.getElementById('am-hour').innerHTML = '<option value="">--</option>' + Array.from({length:12},(_,i)=>i+1).map(h=>`<option value="${h}">${h}</option>`).join('');
+  document.getElementById('am-minute').innerHTML = Array.from({length:12},(_,i)=>i*5).map(m=>`<option value="${pad2(m)}">${pad2(m)}</option>`).join('');
   renderAll();
 }
 
@@ -681,6 +687,27 @@ function chipDayNum(d){
   const m = String(d.date||'').match(/\d+/);
   return m ? m[0] : '';
 }
+const MONTH_NUM = {jan:'01',feb:'02',mar:'03',apr:'04',may:'05',jun:'06',jul:'07',aug:'08',sep:'09',oct:'10',nov:'11',dec:'12'};
+function dayIsoOrFallback(d){
+  if(d.iso) return d.iso;
+  const m = String(d.date||'').match(/([A-Za-z]+)\s+(\d+)(?:,\s*(\d{4}))?/);
+  if(!m) return '9999-99-99';
+  const mo = MONTH_NUM[m[1].slice(0,3).toLowerCase()] || '99';
+  const day = m[2].padStart(2,'0');
+  const yr = m[3] || '2026';
+  return `${yr}-${mo}-${day}`;
+}
+function sortDays(){
+  DAYS.sort((a,b) => dayIsoOrFallback(a).localeCompare(dayIsoOrFallback(b)));
+  state.days = DAYS;
+}
+function chipMonthDay(d){
+  if(d.iso){
+    const [y,m,dd] = d.iso.split('-').map(Number);
+    return new Date(y, m-1, dd).toLocaleDateString('en-US', {month:'short', day:'numeric'});
+  }
+  return String(d.date||'').replace(/,?\s*\d{4}$/, '');
+}
 
 function renderDayStrip(){
   const el = document.getElementById('day-strip');
@@ -688,7 +715,7 @@ function renderDayStrip(){
     const t = dayTentativeTotal(d.id);
     return `<div class="day-chip ${legClass(d.dest)} ${d.id===activeItinDay?'active':''}" data-day="${d.id}">
       <span class="dow">${escapeHtml(d.label)}</span>
-      <span class="num">${escapeHtml(chipDayNum(d))}</span>
+      <span class="num">${escapeHtml(chipMonthDay(d))}</span>
       ${t>0 ? `<span class="amt">${fmt(t)}</span>` : ''}
     </div>`;
   }).join('');
@@ -826,7 +853,7 @@ document.getElementById('nd-add').addEventListener('click', () => {
   const newDay = {id, label, date, dayNum, iso, dest};
   if(note) newDay.label2 = note;
   DAYS.push(newDay);
-  state.days = DAYS;
+  sortDays();
   ensureDayBuckets();
   activeItinDay = id;
   scheduleSave();
@@ -843,7 +870,9 @@ function openActivityModal(dayId, editIndex){
   document.getElementById('am-title').textContent = a ? 'Edit activity' : 'Add activity';
   document.getElementById('am-save').textContent = a ? 'Update activity' : 'Save activity';
   document.getElementById('am-cancel').style.display = a ? 'block' : 'none';
-  document.getElementById('am-time').value = a ? (a.time || '') : '';
+  const timeMatch = a && a.time ? String(a.time).match(/^(\d{1,2}):(\d{1,2})$/) : null;
+  document.getElementById('am-hour').value = timeMatch ? String(parseInt(timeMatch[1],10)) : '';
+  document.getElementById('am-minute').value = timeMatch ? pad2(roundToNearest5(parseInt(timeMatch[2],10))) : '00';
   document.getElementById('am-ampm').value = a ? (a.ampm || 'AM') : 'AM';
   document.getElementById('am-name').value = a ? a.name : '';
   document.getElementById('am-type').value = a ? a.type : 'restaurant';
@@ -896,7 +925,9 @@ document.getElementById('am-add-line').addEventListener('click', () => {
 });
 document.getElementById('am-save').addEventListener('click', () => {
   const dayId = modalDraft.dayId;
-  const time = document.getElementById('am-time').value.trim();
+  const hour = document.getElementById('am-hour').value;
+  const minute = document.getElementById('am-minute').value;
+  const time = hour ? `${hour}:${minute}` : '';
   const ampm = document.getElementById('am-ampm').value;
   const name = document.getElementById('am-name').value.trim();
   const type = document.getElementById('am-type').value;
