@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>Boracay → Cebu Trip</title>
+<title>Trip Planner</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
 <style>
@@ -19,6 +19,7 @@
     --rust:#B5652B;
     --rust-deep:#8F4E1F;
     --rust-tint:#F5EAE0;
+    --shadow: 0 2px 10px rgba(27,42,46,0.07);
   }
   *{box-sizing:border-box;}
   body{
@@ -30,34 +31,41 @@
     padding-bottom:48px;
   }
   .wrap{max-width:520px;margin:0 auto;padding:0 18px;}
+  button{font-family:inherit;}
 
   header{
     background:var(--ink);
     color:var(--bg);
-    padding:22px 18px 26px;
+    padding:20px 18px 24px;
     position:relative;
   }
+  header .route-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}
   header .route{
     font-family:'IBM Plex Mono', monospace;
     font-size:12px;
     letter-spacing:0.06em;
     color:#9FB2B4;
-    margin-bottom:6px;
   }
+  header .hdr-edit{
+    background:rgba(255,255,255,0.1);
+    border:none;
+    color:var(--bg);
+    font-size:11px;
+    padding:5px 10px;
+    border-radius:20px;
+    cursor:pointer;
+    transition:background 0.15s ease, transform 0.1s ease;
+  }
+  header .hdr-edit:active{transform:scale(0.95);background:rgba(255,255,255,0.18);}
   header h1{
     font-family:'Fraunces', serif;
     font-weight:600;
-    font-size:30px;
-    line-height:1.05;
-    margin:0 0 10px;
+    font-size:29px;
+    line-height:1.08;
+    margin:0 0 8px;
+    word-break:break-word;
   }
-  header .dates{
-    display:flex;
-    gap:18px;
-    font-size:13px;
-    color:#C8D3D2;
-  }
-  header .dates b{color:var(--bg);font-weight:600;}
+  header .dates{font-size:13px;color:#C8D3D2;}
 
   nav.tabs{
     display:flex;
@@ -74,43 +82,35 @@
     padding:14px 8px;
     background:none;
     border:none;
-    font-family:'IBM Plex Sans', sans-serif;
     font-size:14px;
     font-weight:500;
     color:var(--ink-soft);
     cursor:pointer;
     border-bottom:2px solid transparent;
+    transition:color 0.15s ease, border-color 0.15s ease;
   }
-  nav.tabs button.active{
-    color:var(--ink);
-    border-bottom:2px solid var(--ink);
-  }
+  nav.tabs button.active{color:var(--ink);border-bottom:2px solid var(--teal);}
 
   main{padding-top:18px;}
   .view{display:none;}
-  .view.active{display:block;}
+  .view.active{display:block;animation:fadein 0.18s ease;}
+  @keyframes fadein{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:translateY(0);}}
 
-  /* Day strip (calendar row) */
-  .day-strip{
-    display:flex;
-    gap:8px;
-    overflow-x:auto;
-    padding:2px 2px 16px;
-    -webkit-overflow-scrolling:touch;
-  }
+  /* Day strip */
+  .day-strip{display:flex;gap:8px;overflow-x:auto;padding:2px 2px 16px;-webkit-overflow-scrolling:touch;}
   .day-chip{
     flex-shrink:0;
-    display:flex;
-    flex-direction:column;
-    align-items:center;
-    gap:3px;
+    display:flex;flex-direction:column;align-items:center;gap:3px;
     border:1px solid var(--line);
     background:var(--card);
     border-radius:12px;
     padding:9px 15px;
     cursor:pointer;
     min-width:56px;
+    box-shadow:var(--shadow);
+    transition:transform 0.12s ease, box-shadow 0.12s ease;
   }
+  .day-chip:active{transform:scale(0.96);}
   .day-chip .dow{font-size:10px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.04em;}
   .day-chip .num{font-family:'Fraunces',serif;font-size:16px;font-weight:600;line-height:1;}
   .day-chip .amt{font-size:9px;font-family:'IBM Plex Mono',monospace;color:var(--ink-soft);}
@@ -119,21 +119,11 @@
   .day-chip.active.boracay{background:var(--teal);border-color:var(--teal);}
   .day-chip.active.cebu{background:var(--rust);border-color:var(--rust);}
   .day-chip.active .dow, .day-chip.active .num, .day-chip.active .amt{color:#fff;}
-  .day-chip.add-day{
-    border-style:dashed;
-    color:var(--ink-soft);
-    justify-content:center;
-    min-width:44px;
-  }
+  .day-chip.add-day{border-style:dashed;color:var(--ink-soft);justify-content:center;min-width:44px;box-shadow:none;}
   .day-chip.add-day .plus{font-size:20px;line-height:1;}
 
   /* Expanded day card */
-  .expand-card{
-    background:var(--card);
-    border:1px solid var(--line);
-    border-radius:12px;
-    overflow:hidden;
-  }
+  .expand-card{background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden;box-shadow:var(--shadow);}
   .expand-head{padding:16px;border-bottom:1px dashed var(--line);}
   .expand-card.boracay .expand-head{background:var(--teal-tint);}
   .expand-card.cebu .expand-head{background:var(--rust-tint);}
@@ -146,153 +136,140 @@
   .expand-head .tentative b{font-family:'IBM Plex Mono',monospace;font-size:18px;}
 
   .activities{padding:6px 16px 4px;}
-  .activity{
-    display:flex;
-    gap:12px;
-    padding:12px 0;
-    border-bottom:1px solid var(--line);
-  }
+  .activity{display:flex;gap:10px;padding:12px 0;border-bottom:1px solid var(--line);align-items:flex-start;}
   .activity:last-child{border-bottom:none;}
-  .activity .time{
-    font-family:'IBM Plex Mono', monospace;
-    font-size:12px;
-    color:var(--ink-soft);
-    width:50px;
-    flex-shrink:0;
-    padding-top:1px;
-  }
+  .activity .reorder{display:flex;flex-direction:column;gap:1px;flex-shrink:0;padding-top:1px;}
+  .activity .reorder button{background:none;border:none;color:var(--ink-soft);cursor:pointer;font-size:9px;line-height:1;padding:3px 2px;}
+  .activity .reorder button:disabled{opacity:0.25;cursor:default;}
+  .activity .time{font-family:'IBM Plex Mono', monospace;font-size:11.5px;color:var(--ink-soft);width:56px;flex-shrink:0;padding-top:1px;}
   .activity .body{flex:1;min-width:0;}
   .activity .name-row{display:flex;align-items:center;gap:7px;flex-wrap:wrap;}
   .activity .name{font-size:14px;font-weight:500;}
-  .activity .type-badge{
-    font-size:9.5px;
-    letter-spacing:0.03em;
-    color:var(--ink-soft);
-    background:var(--bg);
-    border:1px solid var(--line);
-    border-radius:4px;
-    padding:2px 6px;
-    flex-shrink:0;
-  }
+  .activity .type-badge{font-size:9.5px;letter-spacing:0.03em;color:var(--ink-soft);background:var(--bg);border:1px solid var(--line);border-radius:4px;padding:2px 6px;flex-shrink:0;}
   .activity .note{font-size:12px;color:var(--ink-soft);margin-top:4px;}
   .activity .price{font-size:12px;color:var(--ink);font-weight:500;margin-top:2px;font-family:'IBM Plex Mono', monospace;}
-  .activity .del{
-    background:none;border:none;color:var(--ink-soft);
-    cursor:pointer;font-size:16px;line-height:1;padding:2px 4px;
-    flex-shrink:0;
-  }
+  .activity .actions{display:flex;flex-direction:column;gap:4px;flex-shrink:0;align-items:center;}
+  .activity .actions button{background:none;border:none;color:var(--ink-soft);cursor:pointer;font-size:14px;padding:2px 4px;transition:color 0.12s ease;}
+  .activity .actions button:active{color:var(--ink);}
   .empty{font-size:13px;color:var(--ink-soft);padding:12px 0;font-style:italic;}
 
-  .add-row{display:flex;flex-wrap:wrap;gap:6px;padding:12px 16px 16px;}
-  .add-row input, .add-row select{
-    border:1px solid var(--line);
-    border-radius:6px;
-    padding:8px 9px;
-    font-size:13px;
-    font-family:inherit;
-    background:var(--bg);
-    color:var(--ink);
+  .add-activity-btn{
+    width:calc(100% - 32px);
+    margin:14px 16px 16px;
+    border:none;
+    background:var(--teal);
+    color:#fff;
+    border-radius:10px;
+    padding:13px;
+    font-size:14px;
+    font-weight:600;
+    cursor:pointer;
+    box-shadow:0 3px 10px rgba(42,157,143,0.28);
+    transition:transform 0.12s ease, box-shadow 0.12s ease;
   }
-  .add-row input:focus, .add-row select:focus{outline:2px solid var(--ink); outline-offset:1px;}
-  .add-row .t-time{width:60px;}
-  .add-row .t-name{flex:1 1 100px;min-width:0;}
-  .add-row .t-type{width:118px;flex-shrink:0;}
-  .add-row .t-detail{flex:1 1 140px;min-width:0;}
-  .add-row .t-price{width:92px;flex-shrink:0;}
-  .add-row button.add{
-    border:none;background:var(--ink);color:var(--bg);
-    border-radius:6px;padding:0 13px;font-size:14px;cursor:pointer;flex-shrink:0;
-  }
-  .add-row .full-row{display:flex;gap:6px;width:100%;flex-wrap:wrap;}
-  .add-row .section-label{font-size:11px;text-transform:uppercase;letter-spacing:.03em;color:var(--ink-soft);width:100%;margin:4px 0 -2px;}
-  .staged-items{width:100%;}
-  .staged-items:not(:empty){border-top:1px dashed var(--line);margin-top:2px;padding-top:2px;}
+  .add-activity-btn:active{transform:scale(0.98);box-shadow:0 1px 5px rgba(42,157,143,0.28);}
 
-  /* Modal (Add a day) */
+  /* Modals */
   .modal-backdrop{
     display:none;
     position:fixed;inset:0;
-    background:rgba(27,42,46,0.5);
+    background:rgba(27,42,46,0);
     z-index:50;
     align-items:flex-end;
     justify-content:center;
+    transition:background 0.2s ease;
   }
-  .modal-backdrop.open{display:flex;}
+  .modal-backdrop.open{display:flex;background:rgba(27,42,46,0.5);}
   .modal-sheet{
     background:var(--bg);
     width:100%;
     max-width:520px;
-    max-height:82vh;
+    max-height:88vh;
     overflow-y:auto;
-    border-radius:16px 16px 0 0;
+    border-radius:18px 18px 0 0;
     padding-bottom:22px;
+    transform:translateY(16px);
+    opacity:0;
+    transition:transform 0.22s cubic-bezier(.32,.72,.35,1), opacity 0.18s ease;
   }
+  .modal-backdrop.open .modal-sheet{transform:translateY(0);opacity:1;}
   .modal-head{
     position:sticky;top:0;
     display:flex;justify-content:space-between;align-items:center;
     background:var(--ink);color:var(--bg);
     padding:15px 18px;
     font-family:'Fraunces',serif;font-size:16px;font-weight:600;
-    border-radius:16px 16px 0 0;
+    border-radius:18px 18px 0 0;
     z-index:2;
   }
   .modal-head button.modal-close{background:none;border:none;color:var(--bg);font-size:19px;cursor:pointer;padding:0 4px;line-height:1;}
   .modal-body{padding:16px 18px 4px;}
-  .modal-body label{font-size:11px;text-transform:uppercase;letter-spacing:.03em;color:var(--ink-soft);display:block;margin:10px 0 4px;}
+  .modal-body label{font-size:11px;text-transform:uppercase;letter-spacing:.03em;color:var(--ink-soft);display:block;margin:12px 0 4px;}
   .modal-body input, .modal-body select{
     width:100%;
     border:1px solid var(--line);
-    border-radius:6px;
-    padding:10px 11px;
+    border-radius:8px;
+    padding:11px 12px;
     font-size:14px;
     font-family:inherit;
     background:var(--card);
     color:var(--ink);
+    transition:border-color 0.12s ease;
   }
+  .modal-body input:focus, .modal-body select:focus{outline:none;border-color:var(--teal);}
+  .modal-body .row2{display:flex;gap:8px;}
+  .modal-body .row2 > div{flex:1;}
+  .modal-body .row3{display:flex;gap:8px;}
+  .modal-body .row3 .grow{flex:2;}
+  .modal-body .row3 .small{flex:1;}
   .modal-body button.save{
     width:100%;
-    margin-top:18px;
-    border:none;background:var(--ink);color:var(--bg);
-    border-radius:8px;padding:12px;font-size:14px;font-weight:500;cursor:pointer;
+    margin-top:20px;
+    border:none;background:var(--teal);color:#fff;
+    border-radius:10px;padding:13px;font-size:14px;font-weight:600;cursor:pointer;
+    box-shadow:0 3px 10px rgba(42,157,143,0.28);
+    transition:transform 0.12s ease;
+  }
+  .modal-body button.save:active{transform:scale(0.98);}
+  .modal-body button.save.secondary{
+    background:var(--card);color:var(--ink-soft);border:1px solid var(--line);box-shadow:none;margin-top:8px;
+  }
+  .staged-items{width:100%;margin-top:10px;}
+  .staged-items:not(:empty){border-top:1px dashed var(--line);padding-top:6px;}
+  .staged-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;gap:8px;}
+  .staged-row .desc{font-size:13px;flex:1;min-width:0;}
+  .staged-row .amt{font-family:'IBM Plex Mono',monospace;font-size:13px;}
+  .staged-row button{background:none;border:none;color:var(--ink-soft);font-size:15px;cursor:pointer;padding:0 2px;}
+  .add-line-row{display:flex;gap:6px;margin-top:10px;}
+  .add-line-row input{flex:1;min-width:0;}
+  .add-line-row button{
+    flex-shrink:0;border:none;background:var(--ink);color:var(--bg);
+    border-radius:8px;padding:0 14px;font-size:13px;cursor:pointer;
   }
 
   /* Expenses */
   .totals-bar{
-    display:flex;
-    justify-content:space-between;
-    align-items:baseline;
-    background:var(--ink);
-    color:var(--bg);
-    border-radius:10px;
-    padding:16px 18px;
-    margin-bottom:16px;
+    display:flex;justify-content:space-between;align-items:baseline;
+    background:var(--ink);color:var(--bg);border-radius:12px;padding:16px 18px;margin-bottom:16px;
+    box-shadow:var(--shadow);
   }
   .totals-bar .label{font-size:12px;color:#B9C6C6;}
   .totals-bar .amount{font-family:'Fraunces', serif;font-size:26px;font-weight:600;}
 
   .day-select{display:flex;gap:6px;overflow-x:auto;padding-bottom:12px;margin-bottom:4px;}
   .day-select button{
-    flex-shrink:0;
-    border:1px solid var(--line);
-    background:var(--card);
-    padding:7px 12px;
-    border-radius:20px;
-    font-size:12px;
-    font-family:'IBM Plex Mono', monospace;
-    color:var(--ink-soft);
-    cursor:pointer;
-    text-align:center;
+    flex-shrink:0;border:1px solid var(--line);background:var(--card);
+    padding:7px 12px;border-radius:20px;font-size:12px;
+    font-family:'IBM Plex Mono', monospace;color:var(--ink-soft);cursor:pointer;text-align:center;
+    transition:transform 0.1s ease;
   }
+  .day-select button:active{transform:scale(0.95);}
   .day-select button.active{background:var(--ink);color:var(--bg);border-color:var(--ink);}
 
-  .exp-card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:14px;}
+  .exp-card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:14px;box-shadow:var(--shadow);}
   .exp-row{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--line);gap:8px;}
   .exp-row:last-of-type{border-bottom:none;}
-  .exp-row .cat{
-    font-size:10px;letter-spacing:0.03em;color:var(--ink-soft);
-    background:var(--bg);border:1px solid var(--line);border-radius:4px;
-    padding:2px 6px;flex-shrink:0;
-  }
+  .exp-row .cat{font-size:10px;letter-spacing:0.03em;color:var(--ink-soft);background:var(--bg);border:1px solid var(--line);border-radius:4px;padding:2px 6px;flex-shrink:0;}
   .exp-row .cat.auto{background:var(--teal-tint);border-color:var(--teal);color:var(--teal-deep);}
   .exp-row .desc{flex:1;font-size:14px;min-width:0;}
   .exp-row .amt{font-family:'IBM Plex Mono', monospace;font-size:14px;font-weight:500;}
@@ -300,16 +277,13 @@
   .day-total{display:flex;justify-content:space-between;padding-top:10px;margin-top:2px;font-size:13px;color:var(--ink-soft);}
 
   .exp-add{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px;}
-  .exp-add select, .exp-add input{
-    border:1px solid var(--line);border-radius:6px;padding:8px 9px;font-size:13px;
-    font-family:inherit;background:var(--bg);color:var(--ink);
-  }
+  .exp-add select, .exp-add input{border:1px solid var(--line);border-radius:8px;padding:8px 9px;font-size:13px;font-family:inherit;background:var(--bg);color:var(--ink);}
   .exp-add .e-desc{flex:1 1 120px;min-width:0;}
   .exp-add .e-amt{width:90px;}
-  .exp-add button.add{border:none;background:var(--ink);color:var(--bg);border-radius:6px;padding:0 13px;font-size:14px;cursor:pointer;}
+  .exp-add button.add{border:none;background:var(--ink);color:var(--bg);border-radius:8px;padding:0 13px;font-size:14px;cursor:pointer;}
 
   /* Summary */
-  .sum-card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:18px;margin-bottom:14px;}
+  .sum-card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px;margin-bottom:14px;box-shadow:var(--shadow);}
   .sum-card h3{font-family:'Fraunces', serif;font-size:15px;margin:0 0 12px;}
   .bar-row{margin-bottom:10px;}
   .bar-row .bar-top{display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;color:var(--ink-soft);}
@@ -318,24 +292,21 @@
   .leg-total{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--line);}
   .leg-total:last-child{border-bottom:none;}
   .budget-row{display:flex;gap:8px;align-items:center;margin-top:10px;}
-  .budget-row input{
-    border:1px solid var(--line);border-radius:6px;padding:8px 9px;font-size:13px;width:110px;
-    font-family:inherit;background:var(--bg);color:var(--ink);
-  }
+  .budget-row input{border:1px solid var(--line);border-radius:8px;padding:8px 9px;font-size:13px;width:110px;font-family:inherit;background:var(--bg);color:var(--ink);}
   .budget-row label{font-size:12px;color:var(--ink-soft);}
 
-  footer.hint{
-    max-width:520px;margin:26px auto 0;padding:0 18px;
-    font-size:11.5px;color:var(--ink-soft);line-height:1.5;
-  }
+  footer.hint{max-width:520px;margin:26px auto 0;padding:0 18px;font-size:11.5px;color:var(--ink-soft);line-height:1.5;}
 </style>
 </head>
 <body>
 
 <header>
-  <div class="route">MPH → CEB &nbsp;·&nbsp; DEC 06 – DEC 11, 2026</div>
-  <h1>Boracay → Cebu</h1>
-  <div class="dates"><span><b>Leg 1</b> Boracay, Dec 6–9</span><span><b>Leg 2</b> Cebu, Dec 9–11</span></div>
+  <div class="route-row">
+    <span class="route" id="hdr-route"></span>
+    <button class="hdr-edit" id="hdr-edit-btn">✎ Edit trip</button>
+  </div>
+  <h1 id="hdr-title">Trip</h1>
+  <div class="dates" id="hdr-dates"></div>
 </header>
 
 <nav class="tabs">
@@ -357,7 +328,7 @@
   <section id="view-expenses" class="view">
     <div class="totals-bar">
       <div><div class="label">Trip total so far</div><div class="amount" id="trip-total">₱0</div></div>
-      <div style="text-align:right"><div class="label">Days logged</div><div class="amount" id="days-logged" style="font-size:20px">0/6</div></div>
+      <div style="text-align:right"><div class="label">Days logged</div><div class="amount" id="days-logged" style="font-size:20px">0/0</div></div>
     </div>
     <div class="day-select" id="day-select"></div>
     <div class="exp-card" id="exp-card"></div>
@@ -365,18 +336,9 @@
 
   <!-- SUMMARY -->
   <section id="view-summary" class="view">
-    <div class="sum-card">
-      <h3>By day</h3>
-      <div id="day-totals"></div>
-    </div>
-    <div class="sum-card">
-      <h3>By destination</h3>
-      <div id="leg-totals"></div>
-    </div>
-    <div class="sum-card">
-      <h3>By category</h3>
-      <div id="cat-bars"></div>
-    </div>
+    <div class="sum-card"><h3>By day</h3><div id="day-totals"></div></div>
+    <div class="sum-card"><h3>By destination</h3><div id="leg-totals"></div></div>
+    <div class="sum-card"><h3>By category</h3><div id="cat-bars"></div></div>
     <div class="sum-card">
       <h3>Budget</h3>
       <div class="budget-row">
@@ -405,6 +367,46 @@
       <label>Note (optional)</label>
       <input type="text" id="nd-note" placeholder="e.g. Boracay → Cebu">
       <button class="save" id="nd-add">Add day</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add/Edit Activity modal -->
+<div class="modal-backdrop" id="activity-modal-backdrop">
+  <div class="modal-sheet">
+    <div class="modal-head"><span id="am-title">Add activity</span><button class="modal-close" id="am-close">✕</button></div>
+    <div class="modal-body">
+      <div class="row3">
+        <div class="grow"><label>Time</label><input type="text" id="am-time" placeholder="9:00"></div>
+        <div class="small"><label>&nbsp;</label><select id="am-ampm"><option>AM</option><option>PM</option></select></div>
+      </div>
+      <label>Activity</label>
+      <input type="text" id="am-name" placeholder="e.g. Lunch at Halo Grill">
+      <label>Type</label>
+      <select id="am-type"></select>
+      <label id="am-item-label">Food to order</label>
+      <div class="row2">
+        <input type="text" id="am-item-text" placeholder="Item">
+        <input type="number" id="am-item-price" placeholder="Price (optional)" style="max-width:110px;">
+      </div>
+      <div class="add-line-row"><button id="am-add-line" style="width:100%;">+ Add line</button></div>
+      <div class="staged-items" id="am-staged"></div>
+      <button class="save" id="am-save">Save activity</button>
+      <button class="save secondary" id="am-cancel" style="display:none;">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Trip modal -->
+<div class="modal-backdrop" id="trip-backdrop">
+  <div class="modal-sheet">
+    <div class="modal-head"><span>Edit trip</span><button class="modal-close" id="trip-close">✕</button></div>
+    <div class="modal-body">
+      <label>Trip title</label>
+      <input type="text" id="tm-title" placeholder="e.g. Japan Spring Trip">
+      <label>Route / flight code (optional)</label>
+      <input type="text" id="tm-route" placeholder="e.g. MPH → CEB">
+      <button class="save" id="tm-save">Save</button>
     </div>
   </div>
 </div>
@@ -442,6 +444,7 @@ let DAYS = DEFAULT_DAYS.slice();
 
 let state = {
   days: null,
+  trip: {title:'Boracay → Cebu', route:'MPH → CEB'},
   itinerary: {},
   expenses: {},
   budget: null
@@ -455,8 +458,7 @@ ensureDayBuckets();
 let activeExpenseDay = DAYS[0].id;
 let activeItinDay = DAYS[0].id;
 let saveTimer = null;
-let draftItems = {};
-let draftMeta = {};
+let modalDraft = null; // {dayId, editIndex, items:[]} while the activity modal is open
 
 const storageAdapter = (window.storage && typeof window.storage.get === 'function') ? {
   get: (k) => window.storage.get(k, false),
@@ -472,6 +474,26 @@ const storageAdapter = (window.storage && typeof window.storage.get === 'functio
 function round2(n){ return Math.round((Number(n||0) + Number.EPSILON) * 100) / 100; }
 function sumBy(arr, getter){ return round2((arr||[]).reduce((s,x) => round2(s + round2(getter(x))), 0)); }
 function fmt(n){ return '₱' + round2(n).toLocaleString('en-PH', {minimumFractionDigits:0, maximumFractionDigits:2}); }
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+
+function parseTimeToMinutes(str, ampm){
+  if(!str) return null;
+  const m = String(str).trim().match(/^(\d{1,2})(?::(\d{1,2}))?$/);
+  if(!m) return null;
+  let h = parseInt(m[1],10) % 12;
+  const min = m[2] ? parseInt(m[2],10) : 0;
+  if(ampm === 'PM') h += 12;
+  return h*60+min;
+}
+function sortActivities(dayId){
+  state.itinerary[dayId].sort((a,b) => {
+    const av = (a.timeSort===undefined||a.timeSort===null) ? Infinity : a.timeSort;
+    const bv = (b.timeSort===undefined||b.timeSort===null) ? Infinity : b.timeSort;
+    return av - bv;
+  });
+}
 
 function saveNow(){
   clearTimeout(saveTimer);
@@ -496,6 +518,7 @@ async function load(){
     if(res && res.value){
       const parsed = JSON.parse(res.value);
       state = Object.assign(state, parsed);
+      if(parsed.trip) state.trip = Object.assign({title:'Trip', route:''}, parsed.trip);
     }
   }catch(e){ /* no saved data yet */ }
   DAYS = (state.days && state.days.length) ? state.days : DEFAULT_DAYS.slice();
@@ -504,10 +527,12 @@ async function load(){
   activeExpenseDay = DAYS[0] ? DAYS[0].id : null;
   activeItinDay = DAYS[0] ? DAYS[0].id : null;
   document.getElementById('nd-dest').innerHTML = DEST_OPTIONS.map(o=>`<option value="${o.value}">${o.label}</option>`).join('');
+  document.getElementById('am-type').innerHTML = Object.entries(ACTIVITY_TYPES).map(([k,v])=>`<option value="${k}">${v.label}</option>`).join('');
   renderAll();
 }
 
 function renderAll(){
+  renderHeader();
   renderDayStrip();
   renderDayExpand();
   renderExpenseTabs();
@@ -515,9 +540,31 @@ function renderAll(){
   renderSummary();
 }
 
-function escapeHtml(s){
-  return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+/* ---------- HEADER / TRIP ---------- */
+function renderHeader(){
+  document.getElementById('hdr-title').textContent = state.trip.title || 'Trip';
+  const dateRange = DAYS.length ? (DAYS.length>1 ? `${DAYS[0].date} – ${DAYS[DAYS.length-1].date}` : DAYS[0].date) : '';
+  document.getElementById('hdr-route').textContent = [state.trip.route, dateRange].filter(Boolean).join(' · ');
+  document.getElementById('hdr-dates').textContent = DAYS.length ? `${DAYS.length} day${DAYS.length>1?'s':''} planned` : 'No days yet';
 }
+function openTripModal(){
+  document.getElementById('tm-title').value = state.trip.title || '';
+  document.getElementById('tm-route').value = state.trip.route || '';
+  document.getElementById('trip-backdrop').classList.add('open');
+}
+function closeTripModal(){ document.getElementById('trip-backdrop').classList.remove('open'); }
+document.getElementById('hdr-edit-btn').addEventListener('click', openTripModal);
+document.getElementById('trip-close').addEventListener('click', closeTripModal);
+document.getElementById('trip-backdrop').addEventListener('click', e => { if(e.target.id==='trip-backdrop') closeTripModal(); });
+document.getElementById('tm-save').addEventListener('click', () => {
+  state.trip = {
+    title: document.getElementById('tm-title').value.trim() || 'Trip',
+    route: document.getElementById('tm-route').value.trim()
+  };
+  scheduleSave();
+  renderHeader();
+  closeTripModal();
+});
 
 /* ---------- ITINERARY ---------- */
 function legClass(dest){ return dest==='cebu' ? 'cebu' : 'boracay'; }
@@ -527,16 +574,8 @@ function legHeading(dest){
   if(dest==='transit') return 'Transit day';
   return 'Other';
 }
-function getDraftMeta(dayId){
-  if(!draftMeta[dayId]) draftMeta[dayId] = {time:'', name:'', type:'restaurant'};
-  return draftMeta[dayId];
-}
-function activityTotal(a){
-  return sumBy(a.items || [], it => it.price || 0);
-}
-function dayTentativeTotal(dayId){
-  return sumBy(state.itinerary[dayId] || [], a => activityTotal(a));
-}
+function activityTotal(a){ return sumBy(a.items || [], it => it.price || 0); }
+function dayTentativeTotal(dayId){ return sumBy(state.itinerary[dayId] || [], a => activityTotal(a)); }
 
 function renderDayStrip(){
   const el = document.getElementById('day-strip');
@@ -550,7 +589,6 @@ function renderDayStrip(){
   }).join('');
   html += `<div class="day-chip add-day" id="add-day-chip"><span class="plus">+</span><span style="font-size:10px;">Add day</span></div>`;
   el.innerHTML = html;
-
   el.querySelectorAll('.day-chip[data-day]').forEach(chip => chip.addEventListener('click', () => {
     activeItinDay = chip.dataset.day;
     renderDayStrip(); renderDayExpand();
@@ -567,7 +605,6 @@ function renderDayExpand(){
   }
   const acts = state.itinerary[d.id] || [];
   const total = dayTentativeTotal(d.id);
-  const meta = getDraftMeta(d.id);
 
   el.innerHTML = `
     <div class="expand-card ${legClass(d.dest)}">
@@ -586,9 +623,14 @@ function renderDayExpand(){
           const t = ACTIVITY_TYPES[a.type] || ACTIVITY_TYPES.other;
           const items = a.items || [];
           const subtotal = activityTotal(a);
+          const timeLabel = a.time ? `${a.time}${a.ampm ? ' '+a.ampm : ''}` : '';
           return `
           <div class="activity">
-            <div class="time">${a.time||''}</div>
+            <div class="reorder">
+              <button data-idx="${i}" data-dir="up" ${i===0?'disabled':''}>▲</button>
+              <button data-idx="${i}" data-dir="down" ${i===acts.length-1?'disabled':''}>▼</button>
+            </div>
+            <div class="time">${timeLabel}</div>
             <div class="body">
               <div class="name-row"><span class="name">${escapeHtml(a.name)}</span><span class="type-badge">${t.label}</span></div>
               ${items.length ? `
@@ -598,107 +640,28 @@ function renderDayExpand(){
                 </div>` : ''}
               ${subtotal>0 ? `<div class="price">Subtotal: ~${fmt(subtotal)} · logged as expense</div>` : ''}
             </div>
-            <button class="del" data-idx="${i}" data-kind="act">✕</button>
+            <div class="actions">
+              <button data-idx="${i}" data-kind="edit" title="Edit">✎</button>
+              <button data-idx="${i}" data-kind="del" title="Delete">✕</button>
+            </div>
           </div>`;
         }).join('') : '<div class="empty">Nothing planned yet</div>'}
       </div>
-      <div class="add-row">
-        <div class="section-label">Add an activity</div>
-        <div class="full-row">
-          <input class="t-time" type="text" placeholder="9:00" id="f-time" value="${escapeHtml(meta.time)}">
-          <input class="t-name" type="text" placeholder="Add activity" id="f-name" value="${escapeHtml(meta.name)}">
-          <select class="t-type" id="f-type">
-            ${Object.entries(ACTIVITY_TYPES).map(([k,v])=>`<option value="${k}" ${meta.type===k?'selected':''}>${v.label}</option>`).join('')}
-          </select>
-        </div>
-        <div class="full-row">
-          <input class="t-detail" type="text" placeholder="${ACTIVITY_TYPES[meta.type].detailLabel}" id="item-text">
-          <input class="t-price" type="number" placeholder="Price (optional)" id="item-price">
-          <button class="add" id="add-line-btn">+ line</button>
-        </div>
-        <div class="staged-items" id="staged-items"></div>
-        <div class="full-row">
-          <button class="add" id="save-act-btn" style="flex:1;">Save activity</button>
-        </div>
-      </div>
+      <button class="add-activity-btn" id="open-add-activity">+ Add activity</button>
     </div>
   `;
 
   document.getElementById('remove-day-btn').addEventListener('click', () => removeDay(d.id));
-
-  el.querySelectorAll('button.del[data-kind="act"]').forEach(b => b.addEventListener('click', e => {
-    deleteActivity(d.id, +e.target.dataset.idx);
+  document.getElementById('open-add-activity').addEventListener('click', () => openActivityModal(d.id, null));
+  el.querySelectorAll('button[data-kind="del"]').forEach(b => b.addEventListener('click', e => {
+    deleteActivity(d.id, +e.currentTarget.dataset.idx);
   }));
-
-  document.getElementById('f-time').addEventListener('input', e => { getDraftMeta(d.id).time = e.target.value; });
-  document.getElementById('f-name').addEventListener('input', e => { getDraftMeta(d.id).name = e.target.value; });
-  document.getElementById('f-type').addEventListener('change', e => {
-    getDraftMeta(d.id).type = e.target.value;
-    document.getElementById('item-text').placeholder = ACTIVITY_TYPES[e.target.value].detailLabel;
-  });
-  document.getElementById('add-line-btn').addEventListener('click', () => {
-    const textInput = document.getElementById('item-text');
-    const priceInput = document.getElementById('item-price');
-    const text = textInput.value.trim();
-    const price = priceInput.value ? parseFloat(priceInput.value) : null;
-    if(!text) return;
-    if(!draftItems[d.id]) draftItems[d.id] = [];
-    draftItems[d.id].push({text, price});
-    textInput.value=''; priceInput.value=''; textInput.focus();
-    renderStagedItems(d.id);
-  });
-  document.getElementById('save-act-btn').addEventListener('click', () => {
-    saveActivity(d.id);
-  });
-
-  renderStagedItems(d.id);
-}
-
-function renderStagedItems(dayId){
-  const el = document.getElementById('staged-items');
-  if(!el) return;
-  const items = draftItems[dayId] || [];
-  el.innerHTML = items.map((it,i) => `
-    <div class="exp-row" style="padding:6px 0;">
-      <span class="desc" style="font-size:13px;">${escapeHtml(it.text)}</span>
-      ${it.price ? `<span class="amt" style="font-size:13px;">${fmt(it.price)}</span>` : ''}
-      <button class="del" data-idx="${i}">✕</button>
-    </div>`).join('');
-  el.querySelectorAll('button.del').forEach(b => b.addEventListener('click', e => {
-    draftItems[dayId].splice(+e.target.dataset.idx, 1);
-    renderStagedItems(dayId);
+  el.querySelectorAll('button[data-kind="edit"]').forEach(b => b.addEventListener('click', e => {
+    openActivityModal(d.id, +e.currentTarget.dataset.idx);
   }));
-}
-
-function saveActivity(dayId){
-  const time = document.getElementById('f-time').value.trim();
-  const name = document.getElementById('f-name').value.trim();
-  const type = document.getElementById('f-type').value;
-  if(!name){ document.getElementById('f-name').focus(); return; }
-  const items = (draftItems[dayId] || []).slice();
-  const id = 'act-' + Date.now() + '-' + Math.floor(Math.random()*10000);
-  const activity = {id, time, name, type, items};
-  state.itinerary[dayId].push(activity);
-
-  // Auto-log any priced items as expenses for this day.
-  const cat = (ACTIVITY_TYPES[type] || ACTIVITY_TYPES.other).category;
-  items.forEach(it => {
-    if(it.price && it.price > 0){
-      state.expenses[dayId].push({
-        cat,
-        desc: name + (it.text ? ' — ' + it.text : ''),
-        amt: round2(it.price),
-        auto: true,
-        srcActivityId: id
-      });
-    }
-  });
-
-  delete draftItems[dayId];
-  delete draftMeta[dayId];
-  scheduleSave();
-  renderDayStrip(); renderDayExpand();
-  renderExpenseTabs(); renderExpenses(); renderSummary(); updateTotalsBar();
+  el.querySelectorAll('.reorder button').forEach(b => b.addEventListener('click', e => {
+    moveActivity(d.id, +e.currentTarget.dataset.idx, e.currentTarget.dataset.dir);
+  }));
 }
 
 function deleteActivity(dayId, idx){
@@ -710,6 +673,15 @@ function deleteActivity(dayId, idx){
   scheduleSave();
   renderDayStrip(); renderDayExpand();
   renderExpenseTabs(); renderExpenses(); renderSummary(); updateTotalsBar();
+}
+
+function moveActivity(dayId, idx, dir){
+  const list = state.itinerary[dayId];
+  const target = dir === 'up' ? idx - 1 : idx + 1;
+  if(target < 0 || target >= list.length) return;
+  [list[idx], list[target]] = [list[target], list[idx]];
+  scheduleSave();
+  renderDayStrip(); renderDayExpand();
 }
 
 function removeDay(dayId){
@@ -732,13 +704,9 @@ function openAddDayModal(){
   document.getElementById('nd-note').value = '';
   document.getElementById('addday-backdrop').classList.add('open');
 }
-function closeAddDayModal(){
-  document.getElementById('addday-backdrop').classList.remove('open');
-}
+function closeAddDayModal(){ document.getElementById('addday-backdrop').classList.remove('open'); }
 document.getElementById('addday-close').addEventListener('click', closeAddDayModal);
-document.getElementById('addday-backdrop').addEventListener('click', e => {
-  if(e.target.id === 'addday-backdrop') closeAddDayModal();
-});
+document.getElementById('addday-backdrop').addEventListener('click', e => { if(e.target.id === 'addday-backdrop') closeAddDayModal(); });
 document.getElementById('nd-add').addEventListener('click', () => {
   const label = document.getElementById('nd-label').value.trim() || '—';
   const date = document.getElementById('nd-date').value.trim();
@@ -754,7 +722,108 @@ document.getElementById('nd-add').addEventListener('click', () => {
   activeItinDay = id;
   scheduleSave();
   closeAddDayModal();
+  renderHeader();
   renderDayStrip(); renderDayExpand();
+});
+
+/* ---------- ADD/EDIT ACTIVITY MODAL ---------- */
+function openActivityModal(dayId, editIndex){
+  const a = (editIndex != null) ? state.itinerary[dayId][editIndex] : null;
+  modalDraft = {dayId, editIndex, items: a ? (a.items||[]).map(it => ({text: it.text, price: it.price})) : []};
+
+  document.getElementById('am-title').textContent = a ? 'Edit activity' : 'Add activity';
+  document.getElementById('am-save').textContent = a ? 'Update activity' : 'Save activity';
+  document.getElementById('am-cancel').style.display = a ? 'block' : 'none';
+  document.getElementById('am-time').value = a ? (a.time || '') : '';
+  document.getElementById('am-ampm').value = a ? (a.ampm || 'AM') : 'AM';
+  document.getElementById('am-name').value = a ? a.name : '';
+  document.getElementById('am-type').value = a ? a.type : 'restaurant';
+  document.getElementById('am-item-text').value = '';
+  document.getElementById('am-item-price').value = '';
+  syncItemLabel();
+  renderModalStagedItems();
+
+  document.getElementById('activity-modal-backdrop').classList.add('open');
+  setTimeout(() => document.getElementById('am-name').focus(), 60);
+}
+function closeActivityModal(){
+  document.getElementById('activity-modal-backdrop').classList.remove('open');
+  modalDraft = null;
+}
+function syncItemLabel(){
+  const type = document.getElementById('am-type').value;
+  const t = ACTIVITY_TYPES[type] || ACTIVITY_TYPES.other;
+  document.getElementById('am-item-label').textContent = t.detailLabel;
+  document.getElementById('am-item-text').placeholder = t.detailLabel;
+}
+function renderModalStagedItems(){
+  const el = document.getElementById('am-staged');
+  const items = modalDraft.items;
+  el.innerHTML = items.map((it,i) => `
+    <div class="staged-row">
+      <span class="desc">${escapeHtml(it.text)}</span>
+      ${it.price ? `<span class="amt">${fmt(it.price)}</span>` : ''}
+      <button data-idx="${i}">✕</button>
+    </div>`).join('');
+  el.querySelectorAll('button').forEach(b => b.addEventListener('click', e => {
+    modalDraft.items.splice(+e.currentTarget.dataset.idx, 1);
+    renderModalStagedItems();
+  }));
+}
+
+document.getElementById('am-close').addEventListener('click', closeActivityModal);
+document.getElementById('am-cancel').addEventListener('click', closeActivityModal);
+document.getElementById('activity-modal-backdrop').addEventListener('click', e => { if(e.target.id==='activity-modal-backdrop') closeActivityModal(); });
+document.getElementById('am-type').addEventListener('change', syncItemLabel);
+document.getElementById('am-add-line').addEventListener('click', () => {
+  const textInput = document.getElementById('am-item-text');
+  const priceInput = document.getElementById('am-item-price');
+  const text = textInput.value.trim();
+  const price = priceInput.value ? parseFloat(priceInput.value) : null;
+  if(!text) return;
+  modalDraft.items.push({text, price});
+  textInput.value=''; priceInput.value=''; textInput.focus();
+  renderModalStagedItems();
+});
+document.getElementById('am-save').addEventListener('click', () => {
+  const dayId = modalDraft.dayId;
+  const time = document.getElementById('am-time').value.trim();
+  const ampm = document.getElementById('am-ampm').value;
+  const name = document.getElementById('am-name').value.trim();
+  const type = document.getElementById('am-type').value;
+  if(!name){ document.getElementById('am-name').focus(); return; }
+  const items = modalDraft.items.slice();
+  const timeSort = parseTimeToMinutes(time, ampm);
+
+  let id;
+  if(modalDraft.editIndex != null){
+    id = state.itinerary[dayId][modalDraft.editIndex].id;
+    state.expenses[dayId] = state.expenses[dayId].filter(x => x.srcActivityId !== id);
+  } else {
+    id = 'act-' + Date.now() + '-' + Math.floor(Math.random()*10000);
+  }
+  const activity = {id, time, ampm, timeSort, name, type, items};
+  if(modalDraft.editIndex != null){
+    state.itinerary[dayId][modalDraft.editIndex] = activity;
+  } else {
+    state.itinerary[dayId].push(activity);
+  }
+  sortActivities(dayId);
+
+  const cat = (ACTIVITY_TYPES[type] || ACTIVITY_TYPES.other).category;
+  items.forEach(it => {
+    if(it.price && it.price > 0){
+      state.expenses[dayId].push({
+        cat, desc: name + (it.text ? ' — ' + it.text : ''), amt: round2(it.price),
+        auto: true, srcActivityId: id
+      });
+    }
+  });
+
+  closeActivityModal();
+  scheduleSave();
+  renderDayStrip(); renderDayExpand();
+  renderExpenseTabs(); renderExpenses(); renderSummary(); updateTotalsBar();
 });
 
 /* ---------- EXPENSES ---------- */
