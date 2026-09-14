@@ -313,6 +313,7 @@
   <button data-view="itinerary" class="active">Itinerary</button>
   <button data-view="expenses">Expenses</button>
   <button data-view="summary">Summary</button>
+  <button data-view="share">Share</button>
 </nav>
 
 <div class="wrap">
@@ -347,6 +348,26 @@
         <span style="font-size:12px;color:var(--ink-soft)">PHP</span>
       </div>
       <div id="budget-status" style="margin-top:10px;font-size:13px;"></div>
+    </div>
+  </section>
+
+  <!-- SHARE -->
+  <section id="view-share" class="view">
+    <div class="sum-card">
+      <h3>Export your data</h3>
+      <p style="font-size:12.5px;color:var(--ink-soft);margin:0 0 12px;">Copy this code and send it to your partner (Messages, chat, email — anywhere). She pastes it into "Import data" on her phone to get everything you currently have here.</p>
+      <textarea id="exp-code" readonly rows="4" style="width:100%;border:1px solid var(--line);border-radius:8px;padding:10px;font-family:'IBM Plex Mono',monospace;font-size:11px;background:var(--bg);color:var(--ink);resize:none;"></textarea>
+      <div style="display:flex;gap:8px;margin-top:10px;">
+        <button id="exp-copy-btn" class="save" style="margin:0;flex:1;">Copy code</button>
+        <button id="exp-share-btn" class="save" style="margin:0;flex:1;display:none;">Share…</button>
+      </div>
+      <div id="exp-copied-msg" style="font-size:12px;color:var(--teal-deep);margin-top:8px;display:none;">Copied to clipboard.</div>
+    </div>
+    <div class="sum-card">
+      <h3>Import data</h3>
+      <p style="font-size:12.5px;color:var(--ink-soft);margin:0 0 12px;">Paste a code someone sent you below. This replaces everything currently on this device with what's in the code, so make sure you've exported your own data first if you want to keep it.</p>
+      <textarea id="imp-input" rows="4" placeholder="Paste code here" style="width:100%;border:1px solid var(--line);border-radius:8px;padding:10px;font-family:'IBM Plex Mono',monospace;font-size:11px;background:var(--card);color:var(--ink);resize:none;"></textarea>
+      <button id="imp-btn" class="save" style="margin-top:10px;">Import</button>
     </div>
   </section>
 
@@ -477,6 +498,68 @@ function fmt(n){ return '₱' + round2(n).toLocaleString('en-PH', {minimumFracti
 function escapeHtml(s){
   return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 }
+
+/* ---------- SHARE (export/import code) ---------- */
+function encodeState(){
+  const json = JSON.stringify(state);
+  const bytes = new TextEncoder().encode(json);
+  let binary = '';
+  bytes.forEach(b => { binary += String.fromCharCode(b); });
+  return btoa(binary);
+}
+function decodeState(code){
+  const binary = atob(code.trim());
+  const bytes = new Uint8Array(binary.length);
+  for(let i=0;i<binary.length;i++) bytes[i] = binary.charCodeAt(i);
+  const json = new TextDecoder().decode(bytes);
+  return JSON.parse(json);
+}
+function renderShareExport(){
+  document.getElementById('exp-code').value = encodeState();
+  document.getElementById('exp-copied-msg').style.display = 'none';
+}
+document.getElementById('exp-copy-btn').addEventListener('click', async () => {
+  const ta = document.getElementById('exp-code');
+  ta.select();
+  ta.setSelectionRange(0, ta.value.length);
+  try{
+    await navigator.clipboard.writeText(ta.value);
+  }catch(e){
+    try{ document.execCommand('copy'); }catch(e2){ /* selection still lets them copy manually */ }
+  }
+  const msg = document.getElementById('exp-copied-msg');
+  msg.style.display = 'block';
+  setTimeout(() => { msg.style.display = 'none'; }, 2500);
+});
+if(navigator.share){
+  document.getElementById('exp-share-btn').style.display = 'block';
+  document.getElementById('exp-share-btn').addEventListener('click', () => {
+    navigator.share({title: state.trip.title || 'Trip data', text: document.getElementById('exp-code').value}).catch(()=>{});
+  });
+}
+document.getElementById('imp-btn').addEventListener('click', () => {
+  const raw = document.getElementById('imp-input').value.trim();
+  if(!raw) return;
+  if(!confirm('This replaces all itinerary, expenses, and settings currently on this device with the incoming data. Continue?')) return;
+  let incoming;
+  try{
+    incoming = decodeState(raw);
+  }catch(e){
+    alert("That code looks invalid or incomplete. Double-check you copied the whole thing.");
+    return;
+  }
+  state = Object.assign({days:null, trip:{title:'Trip',route:''}, itinerary:{}, expenses:{}, budget:null}, incoming);
+  state.trip = Object.assign({title:'Trip', route:''}, incoming.trip || {});
+  DAYS = (state.days && state.days.length) ? state.days : DEFAULT_DAYS.slice();
+  state.days = DAYS;
+  ensureDayBuckets();
+  activeItinDay = DAYS[0] ? DAYS[0].id : null;
+  activeExpenseDay = DAYS[0] ? DAYS[0].id : null;
+  scheduleSave();
+  renderAll();
+  document.getElementById('imp-input').value = '';
+  alert('Import successful.');
+});
 
 function parseTimeToMinutes(str, ampm){
   if(!str) return null;
@@ -956,6 +1039,7 @@ document.querySelectorAll('nav.tabs button').forEach(b => {
     document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));
     b.classList.add('active');
     document.getElementById('view-' + b.dataset.view).classList.add('active');
+    if(b.dataset.view === 'share') renderShareExport();
   });
 });
 
