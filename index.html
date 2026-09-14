@@ -310,6 +310,11 @@
   .exp-add .e-desc{flex:1 1 120px;min-width:0;}
   .exp-add .e-amt{width:90px;}
   .exp-add button.add{border:none;background:var(--ink);color:var(--bg);border-radius:8px;padding:0 13px;font-size:14px;cursor:pointer;}
+  .kind-toggle{display:flex;gap:6px;width:100%;}
+  .kind-toggle button{flex:1;border:1px solid var(--line);background:var(--bg);color:var(--ink-soft);border-radius:8px;padding:8px;font-size:12.5px;font-weight:500;cursor:pointer;transition:background 0.12s ease;}
+  .kind-toggle button.active{background:var(--ink);color:var(--bg);border-color:var(--ink);}
+  .exp-row .actions{display:flex;gap:2px;flex-shrink:0;}
+  .exp-row .actions button{background:none;border:none;color:var(--ink-soft);cursor:pointer;font-size:14px;padding:0 3px;}
 
   /* Summary */
   .sum-card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px;margin-bottom:14px;box-shadow:var(--shadow);}
@@ -365,8 +370,8 @@
   <!-- EXPENSES -->
   <section id="view-expenses" class="view">
     <div class="totals-bar">
-      <div><div class="label">Trip total so far</div><div class="amount" id="trip-total">₱0</div></div>
-      <div style="text-align:right"><div class="label">Days logged</div><div class="amount" id="days-logged" style="font-size:20px">0/0</div></div>
+      <div><div class="label">Forecasted</div><div class="amount" id="trip-forecast-total" style="font-size:22px">₱0</div></div>
+      <div style="text-align:right"><div class="label">Actual</div><div class="amount" id="trip-total">₱0</div></div>
     </div>
     <div class="day-select" id="day-select"></div>
     <div class="exp-card" id="exp-card"></div>
@@ -374,6 +379,12 @@
 
   <!-- SUMMARY -->
   <section id="view-summary" class="view">
+    <div class="sum-card" id="forecast-vs-actual-card">
+      <h3>Forecast vs actual</h3>
+      <div class="leg-total"><span>Forecasted total</span><b id="fva-forecast">₱0</b></div>
+      <div class="leg-total"><span>Actual total</span><b id="fva-actual">₱0</b></div>
+      <div id="fva-status" style="margin-top:10px;font-size:13px;"></div>
+    </div>
     <div class="sum-card"><h3>By day</h3><div id="day-totals"></div></div>
     <div class="sum-card"><h3>By destination</h3><div id="leg-totals"></div></div>
     <div class="sum-card"><h3>By category</h3><div id="cat-bars"></div></div>
@@ -385,6 +396,21 @@
         <span style="font-size:12px;color:var(--ink-soft)">PHP</span>
       </div>
       <div id="budget-status" style="margin-top:10px;font-size:13px;"></div>
+    </div>
+    <div class="sum-card" id="group-travel-card">
+      <h3>Group travel</h3>
+      <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink);cursor:pointer;text-transform:none;letter-spacing:normal;">
+        <input type="checkbox" id="gt-enabled" style="width:auto;">
+        Group travel?
+      </label>
+      <div id="gt-fields" style="display:none;margin-top:12px;">
+        <div class="budget-row">
+          <label style="margin:0;">Number of people</label>
+          <input type="number" id="gt-people" min="1" step="1" style="width:70px;">
+        </div>
+        <div id="gt-split" style="margin-top:14px;"></div>
+        <button class="save" id="gt-share-btn" style="margin-top:14px;">Share summary</button>
+      </div>
     </div>
   </section>
 
@@ -411,15 +437,15 @@
 </main>
 </div>
 
-<!-- Add Day modal -->
+<!-- Add/Edit Day modal -->
 <div class="modal-backdrop" id="addday-backdrop">
   <div class="modal-sheet">
-    <div class="modal-head"><span>Add a day</span><button class="modal-close" id="addday-close">✕</button></div>
+    <div class="modal-head"><span id="dm-title">Add a day</span><button class="modal-close" id="addday-close">✕</button></div>
     <div class="modal-body">
       <label>Date</label>
       <input type="date" id="nd-datepicker" min="2026-01-01" max="2036-12-31">
       <label>Destination</label>
-      <select id="nd-dest"></select>
+      <input type="text" id="nd-dest" placeholder="e.g. Boracay, Cebu, Tokyo">
       <label>Note (optional)</label>
       <input type="text" id="nd-note" placeholder="e.g. Boracay → Cebu">
       <button class="save" id="nd-add">Add day</button>
@@ -469,6 +495,27 @@
   </div>
 </div>
 
+<!-- Edit Expense modal -->
+<div class="modal-backdrop" id="expedit-backdrop">
+  <div class="modal-sheet">
+    <div class="modal-head"><span>Edit expense</span><button class="modal-close" id="expedit-close">✕</button></div>
+    <div class="modal-body">
+      <label>Type</label>
+      <div class="kind-toggle" id="ee-kind-toggle">
+        <button type="button" data-kind="actual">Actual</button>
+        <button type="button" data-kind="forecast">Forecast</button>
+      </div>
+      <label>Category</label>
+      <select id="ee-cat"></select>
+      <label>Description</label>
+      <input type="text" id="ee-desc" placeholder="Description">
+      <label>Amount</label>
+      <input type="number" id="ee-amt" placeholder="Amount">
+      <button class="save" id="ee-save">Save changes</button>
+    </div>
+  </div>
+</div>
+
 <!-- iOS install instructions modal -->
 <div class="modal-backdrop" id="ios-install-backdrop">
   <div class="modal-sheet">
@@ -508,12 +555,6 @@ const DEFAULT_DAYS = [
   {id:'d10', label:'Thu',  date:'Dec 10', dest:'cebu'},
   {id:'d11', label:'Fri',  date:'Dec 11', dest:'cebu'},
 ];
-const DEST_OPTIONS = [
-  {value:'boracay', label:'Boracay'},
-  {value:'cebu', label:'Cebu'},
-  {value:'transit', label:'Transit'},
-  {value:'other', label:'Other'},
-];
 const ACTIVITY_TYPES = {
   restaurant:    {label:'Restaurant',     detailLabel:'Food to order',     priceLabel:'Tentative price', category:'Food'},
   beach:         {label:'Beach',          detailLabel:'Note',              priceLabel:'Tentative price', category:'Activities'},
@@ -533,7 +574,8 @@ let state = {
   trip: {title:'Boracay → Cebu', route:'MPH → CEB'},
   itinerary: {},
   expenses: {},
-  budget: null
+  budget: null,
+  groupTravel: {enabled: false, people: 2}
 };
 
 function ensureDayBuckets(){
@@ -560,6 +602,8 @@ const storageAdapter = (window.storage && typeof window.storage.get === 'functio
 function round2(n){ return Math.round((Number(n||0) + Number.EPSILON) * 100) / 100; }
 function sumBy(arr, getter){ return round2((arr||[]).reduce((s,x) => round2(s + round2(getter(x))), 0)); }
 function fmt(n){ return '₱' + round2(n).toLocaleString('en-PH', {minimumFractionDigits:0, maximumFractionDigits:2}); }
+function expKind(x){ return x.kind || (x.auto ? 'forecast' : 'actual'); }
+function sumByKind(list, kind){ return sumBy((list||[]).filter(x => expKind(x)===kind), x => x.amt || 0); }
 function escapeHtml(s){
   return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 }
@@ -669,6 +713,7 @@ async function load(){
       const parsed = JSON.parse(res.value);
       state = Object.assign(state, parsed);
       if(parsed.trip) state.trip = Object.assign({title:'Trip', route:''}, parsed.trip);
+      state.groupTravel = Object.assign({enabled:false, people:2}, parsed.groupTravel || {});
     }
   }catch(e){ /* no saved data yet */ }
   DAYS = (state.days && state.days.length) ? state.days : DEFAULT_DAYS.slice();
@@ -676,7 +721,6 @@ async function load(){
   ensureDayBuckets();
   activeExpenseDay = DAYS[0] ? DAYS[0].id : null;
   activeItinDay = DAYS[0] ? DAYS[0].id : null;
-  document.getElementById('nd-dest').innerHTML = DEST_OPTIONS.map(o=>`<option value="${o.value}">${o.label}</option>`).join('');
   document.getElementById('am-type').innerHTML = Object.entries(ACTIVITY_TYPES).map(([k,v])=>`<option value="${k}">${v.label}</option>`).join('');
   document.getElementById('am-hour').innerHTML = '<option value="">--</option>' + Array.from({length:12},(_,i)=>i+1).map(h=>`<option value="${h}">${h}</option>`).join('');
   document.getElementById('am-minute').innerHTML = Array.from({length:12},(_,i)=>i*5).map(m=>`<option value="${pad2(m)}">${pad2(m)}</option>`).join('');
@@ -731,12 +775,19 @@ document.getElementById('tm-save').addEventListener('click', () => {
 });
 
 /* ---------- ITINERARY ---------- */
-function legClass(dest){ return dest==='cebu' ? 'cebu' : 'boracay'; }
+function legClass(dest){
+  // Free-text destinations get a deterministic teal/rust split so the same
+  // place always renders the same color, without hardcoding place names.
+  const d = String(dest||'').trim().toLowerCase();
+  if(!d) return 'boracay';
+  let hash = 0;
+  for(let i=0;i<d.length;i++){ hash = (hash*31 + d.charCodeAt(i)) % 1000; }
+  return (hash % 2 === 0) ? 'boracay' : 'cebu';
+}
 function legHeading(dest){
-  if(dest==='boracay') return 'Boracay';
-  if(dest==='cebu') return 'Cebu';
-  if(dest==='transit') return 'Transit day';
-  return 'Other';
+  const d = String(dest||'').trim();
+  if(!d) return 'Destination';
+  return d.charAt(0).toUpperCase() + d.slice(1);
 }
 function activityTotal(a){ return sumBy(a.items || [], it => it.price || 0); }
 function dayTentativeTotal(dayId){ return sumBy(state.itinerary[dayId] || [], a => activityTotal(a)); }
@@ -804,7 +855,10 @@ function renderDayExpand(){
             <h2>${legHeading(d.dest)} · ${escapeHtml(d.label)}${d.label2 ? ' · '+escapeHtml(d.label2):''}</h2>
             <div class="sub">${escapeHtml(d.date)}</div>
           </div>
-          <button class="remove-day" id="remove-day-btn">Remove day</button>
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0;">
+            <button class="remove-day" id="edit-day-btn">Edit day</button>
+            <button class="remove-day" id="remove-day-btn">Remove day</button>
+          </div>
         </div>
         <div class="tentative"><span class="lbl">Tentative total</span><b>${fmt(total)}</b></div>
       </div>
@@ -842,6 +896,7 @@ function renderDayExpand(){
   `;
 
   document.getElementById('remove-day-btn').addEventListener('click', () => removeDay(d.id));
+  document.getElementById('edit-day-btn').addEventListener('click', () => openDayModal(d.id));
   document.getElementById('open-add-activity').addEventListener('click', () => openActivityModal(d.id, null));
   el.querySelectorAll('button[data-kind="del"]').forEach(b => b.addEventListener('click', e => {
     deleteActivity(d.id, +e.currentTarget.dataset.idx);
@@ -886,34 +941,55 @@ function removeDay(dayId){
   renderAll();
 }
 
-/* ---------- ADD DAY MODAL ---------- */
-function openAddDayModal(){
-  document.getElementById('nd-datepicker').value = '';
-  document.getElementById('nd-dest').value = 'boracay';
-  document.getElementById('nd-note').value = '';
+/* ---------- ADD/EDIT DAY MODAL ---------- */
+let dayModalEditId = null;
+function openAddDayModal(){ openDayModal(null); }
+function openDayModal(editId){
+  const d = editId ? DAYS.find(x => x.id === editId) : null;
+  dayModalEditId = editId || null;
+  document.getElementById('dm-title').textContent = d ? 'Edit day' : 'Add a day';
+  document.getElementById('nd-add').textContent = d ? 'Save changes' : 'Add day';
+  document.getElementById('nd-datepicker').value = d && d.iso ? d.iso : '';
+  document.getElementById('nd-dest').value = d ? (d.dest || '') : '';
+  document.getElementById('nd-note').value = d ? (d.label2 || '') : '';
   document.getElementById('addday-backdrop').classList.add('open');
 }
-function closeAddDayModal(){ document.getElementById('addday-backdrop').classList.remove('open'); }
+function closeAddDayModal(){
+  document.getElementById('addday-backdrop').classList.remove('open');
+  dayModalEditId = null;
+}
 document.getElementById('addday-close').addEventListener('click', closeAddDayModal);
 document.getElementById('addday-backdrop').addEventListener('click', e => { if(e.target.id === 'addday-backdrop') closeAddDayModal(); });
 document.getElementById('nd-add').addEventListener('click', () => {
   const iso = document.getElementById('nd-datepicker').value;
-  const dest = document.getElementById('nd-dest').value;
+  const dest = document.getElementById('nd-dest').value.trim();
   const note = document.getElementById('nd-note').value.trim();
   if(!iso){ document.getElementById('nd-datepicker').focus(); return; }
+  if(!dest){ document.getElementById('nd-dest').focus(); return; }
   const [y, m, dd] = iso.split('-').map(Number);
   const dateObj = new Date(y, m - 1, dd);
   const label = dateObj.toLocaleDateString('en-US', {weekday:'short'});
   const month = dateObj.toLocaleDateString('en-US', {month:'short'});
   const dayNum = String(dateObj.getDate());
   const date = `${month} ${dayNum}, ${y}`;
-  const id = 'custom-' + Date.now();
-  const newDay = {id, label, date, dayNum, iso, dest};
-  if(note) newDay.label2 = note;
-  DAYS.push(newDay);
-  sortDays();
+
+  if(dayModalEditId){
+    const d = DAYS.find(x => x.id === dayModalEditId);
+    if(d){
+      d.label = label; d.date = date; d.dayNum = dayNum; d.iso = iso; d.dest = dest;
+      if(note) d.label2 = note; else delete d.label2;
+    }
+    sortDays();
+    activeItinDay = dayModalEditId;
+  } else {
+    const id = 'custom-' + Date.now();
+    const newDay = {id, label, date, dayNum, iso, dest};
+    if(note) newDay.label2 = note;
+    DAYS.push(newDay);
+    sortDays();
+    activeItinDay = id;
+  }
   ensureDayBuckets();
-  activeItinDay = id;
   scheduleSave();
   closeAddDayModal();
   renderHeader();
@@ -1013,7 +1089,7 @@ document.getElementById('am-save').addEventListener('click', () => {
     if(it.price && it.price > 0){
       state.expenses[dayId].push({
         cat, desc: name + (it.text ? ' — ' + it.text : ''), amt: round2(it.price),
-        auto: true, srcActivityId: id
+        kind: 'forecast', auto: true, srcActivityId: id
       });
     }
   });
@@ -1028,7 +1104,7 @@ document.getElementById('am-save').addEventListener('click', () => {
 function renderExpenseTabs(){
   const el = document.getElementById('day-select');
   el.innerHTML = DAYS.map(d => {
-    const t = sumBy(state.expenses[d.id], x => x.amt || 0);
+    const t = sumByKind(state.expenses[d.id], 'actual');
     return `<button data-day="${d.id}" class="${d.id===activeExpenseDay?'active':''}">${d.label} ${chipDayNum(d)}${t>0 ? `<br><span style="font-size:10px;">${fmt(t)}</span>` : ''}</button>`;
   }).join('');
   el.querySelectorAll('button').forEach(b => b.addEventListener('click', e => {
@@ -1037,21 +1113,36 @@ function renderExpenseTabs(){
   }));
 }
 
+let addExpenseKind = 'actual';
+let editingExpense = null; // {dayId, idx}
+
 function renderExpenses(){
   const el = document.getElementById('exp-card');
   if(!activeExpenseDay){ el.innerHTML = '<div class="empty">No days yet</div>'; return; }
   const list = state.expenses[activeExpenseDay] || [];
-  const dayTotal = sumBy(list, x => x.amt || 0);
+  const forecastTotal = sumByKind(list, 'forecast');
+  const actualTotal = sumByKind(list, 'actual');
   el.innerHTML = `
-    ${list.length ? list.map((x,i)=>`
+    ${list.length ? list.map((x,i)=>{
+      const kind = expKind(x);
+      return `
       <div class="exp-row">
-        <span class="cat ${x.auto?'auto':''}">${x.auto ? 'Planned' : x.cat}</span>
+        <span class="cat ${kind==='forecast'?'auto':''}">${kind==='forecast' ? 'Forecast' : x.cat}</span>
         <span class="desc">${escapeHtml(x.desc)}</span>
         <span class="amt">${fmt(x.amt)}</span>
-        <button class="del" data-idx="${i}">✕</button>
-      </div>`).join('') : '<div class="empty">No expenses logged for this day</div>'}
-    <div class="day-total"><span>Day total</span><span>${fmt(dayTotal)}</span></div>
+        <div class="actions">
+          <button class="edit" data-idx="${i}" title="Edit">✎</button>
+          <button class="del" data-idx="${i}" title="Delete">✕</button>
+        </div>
+      </div>`;
+    }).join('') : '<div class="empty">No expenses logged for this day</div>'}
+    <div class="day-total"><span>Forecasted</span><span>${fmt(forecastTotal)}</span></div>
+    <div class="day-total"><span>Actual</span><span>${fmt(actualTotal)}</span></div>
     <div class="exp-add">
+      <div class="kind-toggle" id="e-kind-toggle">
+        <button type="button" data-kind="actual" class="${addExpenseKind==='actual'?'active':''}">Actual</button>
+        <button type="button" data-kind="forecast" class="${addExpenseKind==='forecast'?'active':''}">Forecast</button>
+      </div>
       <select id="e-cat">${CATEGORIES.map(c=>`<option value="${c}">${c}</option>`).join('')}</select>
       <input class="e-desc" id="e-desc" type="text" placeholder="Description">
       <input class="e-amt" id="e-amt" type="number" placeholder="Amount">
@@ -1059,65 +1150,135 @@ function renderExpenses(){
     </div>
   `;
   el.querySelectorAll('button.del').forEach(b => b.addEventListener('click', e => {
-    state.expenses[activeExpenseDay].splice(+e.target.dataset.idx,1);
+    state.expenses[activeExpenseDay].splice(+e.currentTarget.dataset.idx,1);
     scheduleSave(); renderExpenses(); renderExpenseTabs(); renderSummary(); updateTotalsBar(); renderDayStrip(); renderDayExpand();
+  }));
+  el.querySelectorAll('button.edit').forEach(b => b.addEventListener('click', e => {
+    openExpenseEditModal(activeExpenseDay, +e.currentTarget.dataset.idx);
+  }));
+  el.querySelectorAll('#e-kind-toggle button').forEach(b => b.addEventListener('click', e => {
+    addExpenseKind = e.currentTarget.dataset.kind;
+    el.querySelectorAll('#e-kind-toggle button').forEach(x => x.classList.toggle('active', x===e.currentTarget));
   }));
   document.getElementById('e-add').addEventListener('click', () => {
     const cat = document.getElementById('e-cat').value;
     const desc = document.getElementById('e-desc').value.trim();
     const amt = parseFloat(document.getElementById('e-amt').value);
     if(!desc || !amt) return;
-    state.expenses[activeExpenseDay].push({cat, desc, amt: round2(amt)});
+    state.expenses[activeExpenseDay].push({cat, desc, amt: round2(amt), kind: addExpenseKind});
     scheduleSave(); renderExpenses(); renderExpenseTabs(); renderSummary(); updateTotalsBar();
   });
   updateTotalsBar();
 }
 
+function openExpenseEditModal(dayId, idx){
+  const x = state.expenses[dayId][idx];
+  if(!x) return;
+  editingExpense = {dayId, idx};
+  document.getElementById('ee-cat').innerHTML = CATEGORIES.map(c=>`<option value="${c}">${c}</option>`).join('');
+  document.getElementById('ee-cat').value = x.cat || 'Other';
+  document.getElementById('ee-desc').value = x.desc || '';
+  document.getElementById('ee-amt').value = x.amt || '';
+  const kind = expKind(x);
+  document.querySelectorAll('#ee-kind-toggle button').forEach(b => b.classList.toggle('active', b.dataset.kind===kind));
+  document.getElementById('expedit-backdrop').classList.add('open');
+}
+function closeExpenseEditModal(){
+  document.getElementById('expedit-backdrop').classList.remove('open');
+  editingExpense = null;
+}
+document.getElementById('expedit-close').addEventListener('click', closeExpenseEditModal);
+document.getElementById('expedit-backdrop').addEventListener('click', e => { if(e.target.id==='expedit-backdrop') closeExpenseEditModal(); });
+document.querySelectorAll('#ee-kind-toggle button').forEach(b => b.addEventListener('click', e => {
+  document.querySelectorAll('#ee-kind-toggle button').forEach(x => x.classList.toggle('active', x===e.currentTarget));
+}));
+document.getElementById('ee-save').addEventListener('click', () => {
+  if(!editingExpense) return;
+  const {dayId, idx} = editingExpense;
+  const x = state.expenses[dayId][idx];
+  if(!x) return;
+  const activeBtn = document.querySelector('#ee-kind-toggle button.active');
+  const amt = parseFloat(document.getElementById('ee-amt').value);
+  if(!amt) return;
+  x.cat = document.getElementById('ee-cat').value;
+  x.desc = document.getElementById('ee-desc').value.trim();
+  x.amt = round2(amt);
+  x.kind = activeBtn ? activeBtn.dataset.kind : expKind(x);
+  // No longer purely itinerary-driven once hand-edited, so it can be freely reclassified from here on.
+  delete x.auto;
+  closeExpenseEditModal();
+  scheduleSave();
+  renderExpenses(); renderExpenseTabs(); renderSummary(); updateTotalsBar(); renderDayStrip(); renderDayExpand();
+});
+
+
 function updateTotalsBar(){
-  let total = 0, daysWithData = 0;
+  let forecastTotal = 0, actualTotal = 0;
   DAYS.forEach(d => {
-    const t = sumBy(state.expenses[d.id], x => x.amt || 0);
-    if(t>0) daysWithData++;
-    total = round2(total + t);
+    forecastTotal = round2(forecastTotal + sumByKind(state.expenses[d.id], 'forecast'));
+    actualTotal = round2(actualTotal + sumByKind(state.expenses[d.id], 'actual'));
   });
-  document.getElementById('trip-total').textContent = fmt(total);
-  document.getElementById('days-logged').textContent = daysWithData + '/' + DAYS.length;
+  document.getElementById('trip-forecast-total').textContent = fmt(forecastTotal);
+  document.getElementById('trip-total').textContent = fmt(actualTotal);
 }
 
 /* ---------- SUMMARY ---------- */
 function renderSummary(){
+  // Forecast vs actual (trip-wide)
+  let fTotal = 0, aTotal = 0;
+  DAYS.forEach(d => {
+    fTotal = round2(fTotal + sumByKind(state.expenses[d.id], 'forecast'));
+    aTotal = round2(aTotal + sumByKind(state.expenses[d.id], 'actual'));
+  });
+  document.getElementById('fva-forecast').textContent = fmt(fTotal);
+  document.getElementById('fva-actual').textContent = fmt(aTotal);
+  const fvaStatus = document.getElementById('fva-status');
+  if(fTotal > 0){
+    const diff = round2(aTotal - fTotal);
+    fvaStatus.innerHTML = diff > 0
+      ? `<span style="color:var(--rust-deep)">${fmt(diff)} over your forecast</span>`
+      : diff < 0
+        ? `<span style="color:var(--teal-deep)">${fmt(Math.abs(diff))} under your forecast</span>`
+        : `<span style="color:var(--ink-soft)">Right on forecast</span>`;
+  } else {
+    fvaStatus.innerHTML = '<span style="color:var(--ink-soft)">Add tentative prices in your itinerary to see a forecast here.</span>';
+  }
+
   const dayEl = document.getElementById('day-totals');
   dayEl.innerHTML = DAYS.length ? DAYS.map(d => {
-    const t = sumBy(state.expenses[d.id], x => x.amt || 0);
+    const t = sumByKind(state.expenses[d.id], 'actual');
     return `<div class="leg-total"><span>${escapeHtml(d.label)} · ${escapeHtml(d.date)}</span><b>${fmt(t)}</b></div>`;
   }).join('') : '<div class="empty">No days yet</div>';
 
   const legTotals = {};
   const legDates = {};
+  const legDisplay = {};
   DAYS.forEach(d => {
-    const t = sumBy(state.expenses[d.id], x => x.amt || 0);
-    legTotals[d.dest] = round2((legTotals[d.dest]||0) + t);
-    legDates[d.dest] = legDates[d.dest] || [];
-    legDates[d.dest].push(d.date);
+    const key = String(d.dest||'').trim().toLowerCase();
+    const t = sumByKind(state.expenses[d.id], 'actual');
+    legTotals[key] = round2((legTotals[key]||0) + t);
+    legDates[key] = legDates[key] || [];
+    legDates[key].push(d.date);
+    if(!legDisplay[key]) legDisplay[key] = d.dest;
   });
   const legEl = document.getElementById('leg-totals');
   const destKeys = Object.keys(legTotals);
   legEl.innerHTML = destKeys.length ? destKeys.map(k => {
     const dates = legDates[k];
     const range = dates.length > 1 ? `${dates[0]}–${dates[dates.length-1]}` : dates[0];
-    return `<div class="leg-total"><span>${legHeading(k)} (${escapeHtml(range)})</span><b>${fmt(legTotals[k])}</b></div>`;
+    return `<div class="leg-total"><span>${escapeHtml(legHeading(legDisplay[k]))} (${escapeHtml(range)})</span><b>${fmt(legTotals[k])}</b></div>`;
   }).join('') : '<div class="empty">No days yet</div>';
 
   const catTotals = {};
   CATEGORIES.forEach(c => catTotals[c] = 0);
   let grand = 0;
-  Object.values(state.expenses).forEach(list => (list||[]).forEach(x => {
+  Object.values(state.expenses).forEach(list => (list||[]).filter(x=>expKind(x)==='actual').forEach(x => {
     catTotals[x.cat] = round2((catTotals[x.cat]||0) + Number(x.amt||0));
     grand = round2(grand + Number(x.amt||0));
   }));
   const catEl = document.getElementById('cat-bars');
   if(grand <= 0){
-    catEl.innerHTML = '<div class="empty">Log some expenses to see the breakdown</div>';
+    catEl.innerHTML = '<div class="empty">Log some actual expenses to see the breakdown</div>';
   } else {
     catEl.innerHTML = CATEGORIES.filter(c => catTotals[c] > 0).map(c => {
       const pct = Math.round((catTotals[c]/grand)*100);
@@ -1140,7 +1301,125 @@ function renderSummary(){
   } else {
     statusEl.innerHTML = '';
   }
+
+  renderGroupTravel(aTotal);
 }
+
+function renderGroupTravel(actualTotal){
+  const enabledBox = document.getElementById('gt-enabled');
+  const peopleInput = document.getElementById('gt-people');
+  const fieldsEl = document.getElementById('gt-fields');
+  enabledBox.checked = !!state.groupTravel.enabled;
+  fieldsEl.style.display = state.groupTravel.enabled ? 'block' : 'none';
+  if(document.activeElement !== peopleInput) peopleInput.value = state.groupTravel.people || 2;
+
+  if(!state.groupTravel.enabled) return;
+  const people = Math.max(1, parseInt(state.groupTravel.people,10) || 1);
+  const perPerson = round2(actualTotal / people);
+  document.getElementById('gt-split').innerHTML = `
+    <div class="leg-total"><span>Total actual spend</span><b>${fmt(actualTotal)}</b></div>
+    <div class="leg-total"><span>Split ${people} way${people>1?'s':''}</span><b>${fmt(perPerson)} / person</b></div>
+  `;
+}
+
+document.getElementById('gt-enabled').addEventListener('change', (e) => {
+  state.groupTravel.enabled = e.target.checked;
+  scheduleSave();
+  renderSummary();
+});
+document.getElementById('gt-people').addEventListener('input', (e) => {
+  state.groupTravel.people = e.target.value ? parseInt(e.target.value,10) : 1;
+  scheduleSave();
+  renderSummary();
+});
+
+function loadHtml2Canvas(){
+  return new Promise((resolve, reject) => {
+    if(window.html2canvas) return resolve();
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+    s.onload = () => resolve();
+    s.onerror = () => reject(new Error('failed to load html2canvas'));
+    document.head.appendChild(s);
+  });
+}
+
+function tripActualTotal(){
+  let t = 0;
+  DAYS.forEach(d => { t = round2(t + sumByKind(state.expenses[d.id], 'actual')); });
+  return t;
+}
+function tripForecastTotal(){
+  let t = 0;
+  DAYS.forEach(d => { t = round2(t + sumByKind(state.expenses[d.id], 'forecast')); });
+  return t;
+}
+function buildShareText(){
+  const people = Math.max(1, parseInt(state.groupTravel.people,10)||1);
+  const actualTotal = tripActualTotal();
+  const perPerson = round2(actualTotal/people);
+  return `${state.trip.title || 'Trip'} — Group Expense Summary\nTotal actual spend: ${fmt(actualTotal)}\nSplit ${people} way${people>1?'s':''}: ${fmt(perPerson)} per person`;
+}
+function buildShareableSummaryNode(){
+  const people = Math.max(1, parseInt(state.groupTravel.people,10)||1);
+  const actualTotal = tripActualTotal();
+  const forecastTotal = tripForecastTotal();
+  const perPerson = round2(actualTotal/people);
+  const wrap = document.createElement('div');
+  wrap.style.cssText = 'position:fixed;left:-9999px;top:0;width:360px;background:#FAF8F3;padding:28px;font-family:"IBM Plex Sans", sans-serif;color:#1B2A2E;border-radius:16px;';
+  wrap.innerHTML = `
+    <div style="font-family:'Fraunces', serif;font-weight:700;font-size:22px;margin-bottom:4px;">${escapeHtml(state.trip.title||'Trip')}</div>
+    <div style="font-size:12px;color:#5B6B6E;margin-bottom:20px;">${escapeHtml(formatDateRange())}</div>
+    <div style="background:#1B2A2E;color:#FAF8F3;border-radius:12px;padding:18px;margin-bottom:16px;">
+      <div style="font-size:11px;letter-spacing:.04em;color:#B9C6C6;text-transform:uppercase;">Total actual spend</div>
+      <div style="font-family:'Fraunces', serif;font-size:30px;font-weight:700;">${fmt(actualTotal)}</div>
+    </div>
+    <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #E4DFD3;font-size:14px;">
+      <span>Split ${people} way${people>1?'s':''}</span><b>${fmt(perPerson)} / person</b>
+    </div>
+    <div style="display:flex;justify-content:space-between;padding:10px 0;font-size:14px;color:#5B6B6E;">
+      <span>Forecasted total</span><span>${fmt(forecastTotal)}</span>
+    </div>
+  `;
+  return wrap;
+}
+document.getElementById('gt-share-btn').addEventListener('click', async () => {
+  const btn = document.getElementById('gt-share-btn');
+  const originalText = btn.textContent;
+  btn.textContent = 'Preparing…';
+  btn.disabled = true;
+  try{
+    await loadHtml2Canvas();
+    const node = buildShareableSummaryNode();
+    document.body.appendChild(node);
+    const canvas = await window.html2canvas(node, {backgroundColor: '#FAF8F3', scale: 2});
+    document.body.removeChild(node);
+    canvas.toBlob(async (blob) => {
+      const file = new File([blob], 'trip-summary.png', {type:'image/png'});
+      if(navigator.canShare && navigator.canShare({files:[file]})){
+        try{ await navigator.share({files:[file], title: state.trip.title || 'Trip summary', text: buildShareText()}); }
+        catch(e){ /* user cancelled — no action needed */ }
+      } else {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = 'trip-summary.png';
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }
+      btn.textContent = originalText;
+      btn.disabled = false;
+    }, 'image/png');
+  }catch(e){
+    console.error(e);
+    const text = buildShareText();
+    try{
+      if(navigator.share){ await navigator.share({title: state.trip.title || 'Trip summary', text}); }
+      else { await navigator.clipboard.writeText(text); alert('Image sharing needs an internet connection — copied a text summary to your clipboard instead.'); }
+    }catch(e2){ alert(text); }
+    btn.textContent = originalText;
+    btn.disabled = false;
+  }
+});
 
 document.getElementById('budget-input').addEventListener('input', e => {
   state.budget = e.target.value ? parseFloat(e.target.value) : null;
