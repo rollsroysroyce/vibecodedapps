@@ -1,0 +1,1081 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Trip Planner</title>
+<link rel="manifest" href="./manifest.json">
+<meta name="theme-color" content="#1B2A2E">
+<link rel="apple-touch-icon" href="./icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Trip Planner">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#FAF8F3;
+    --ink:#1B2A2E;
+    --ink-soft:#5B6B6E;
+    --line:#E4DFD3;
+    --card:#FFFFFF;
+    --teal:#2A9D8F;
+    --teal-deep:#1F7A70;
+    --teal-tint:#E7F3F1;
+    --rust:#B5652B;
+    --rust-deep:#8F4E1F;
+    --rust-tint:#F5EAE0;
+    --shadow: 0 2px 10px rgba(27,42,46,0.07);
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'IBM Plex Sans', sans-serif;
+    -webkit-font-smoothing:antialiased;
+    padding-bottom:48px;
+  }
+  .wrap{max-width:520px;margin:0 auto;padding:0 18px;}
+  button{font-family:inherit;}
+
+  header{
+    background:var(--ink);
+    color:var(--bg);
+    padding:20px 18px 24px;
+    position:relative;
+  }
+  header .route-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}
+  header .route{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12px;
+    letter-spacing:0.06em;
+    color:#9FB2B4;
+  }
+  header .hdr-edit{
+    background:rgba(255,255,255,0.1);
+    border:none;
+    color:var(--bg);
+    font-size:11px;
+    padding:5px 10px;
+    border-radius:20px;
+    cursor:pointer;
+    transition:background 0.15s ease, transform 0.1s ease;
+  }
+  header .hdr-edit:active{transform:scale(0.95);background:rgba(255,255,255,0.18);}
+  header h1{
+    font-family:'Fraunces', serif;
+    font-weight:600;
+    font-size:29px;
+    line-height:1.08;
+    margin:0 0 8px;
+    word-break:break-word;
+  }
+  header .dates{font-size:13px;color:#C8D3D2;}
+
+  nav.tabs{
+    display:flex;
+    max-width:520px;
+    margin:0 auto;
+    border-bottom:1px solid var(--line);
+    background:var(--bg);
+    position:sticky;
+    top:0;
+    z-index:5;
+  }
+  nav.tabs button{
+    flex:1;
+    padding:14px 8px;
+    background:none;
+    border:none;
+    font-size:14px;
+    font-weight:500;
+    color:var(--ink-soft);
+    cursor:pointer;
+    border-bottom:2px solid transparent;
+    transition:color 0.15s ease, border-color 0.15s ease;
+  }
+  nav.tabs button.active{color:var(--ink);border-bottom:2px solid var(--teal);}
+
+  main{padding-top:18px;}
+  .view{display:none;}
+  .view.active{display:block;animation:fadein 0.18s ease;}
+  @keyframes fadein{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:translateY(0);}}
+
+  /* Day strip */
+  .day-strip{display:flex;gap:8px;overflow-x:auto;padding:2px 2px 16px;-webkit-overflow-scrolling:touch;}
+  .day-chip{
+    flex-shrink:0;
+    display:flex;flex-direction:column;align-items:center;gap:3px;
+    border:1px solid var(--line);
+    background:var(--card);
+    border-radius:12px;
+    padding:9px 15px;
+    cursor:pointer;
+    min-width:56px;
+    box-shadow:var(--shadow);
+    transition:transform 0.12s ease, box-shadow 0.12s ease;
+  }
+  .day-chip:active{transform:scale(0.96);}
+  .day-chip .dow{font-size:10px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.04em;}
+  .day-chip .num{font-family:'Fraunces',serif;font-size:16px;font-weight:600;line-height:1;}
+  .day-chip .amt{font-size:9px;font-family:'IBM Plex Mono',monospace;color:var(--ink-soft);}
+  .day-chip.boracay{border-color:var(--teal);}
+  .day-chip.cebu{border-color:var(--rust);}
+  .day-chip.active.boracay{background:var(--teal);border-color:var(--teal);}
+  .day-chip.active.cebu{background:var(--rust);border-color:var(--rust);}
+  .day-chip.active .dow, .day-chip.active .num, .day-chip.active .amt{color:#fff;}
+  .day-chip.add-day{border-style:dashed;color:var(--ink-soft);justify-content:center;min-width:44px;box-shadow:none;}
+  .day-chip.add-day .plus{font-size:20px;line-height:1;}
+
+  /* Expanded day card */
+  .expand-card{background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden;box-shadow:var(--shadow);}
+  .expand-head{padding:16px;border-bottom:1px dashed var(--line);}
+  .expand-card.boracay .expand-head{background:var(--teal-tint);}
+  .expand-card.cebu .expand-head{background:var(--rust-tint);}
+  .expand-head .row1{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;}
+  .expand-head h2{font-family:'Fraunces',serif;font-size:19px;margin:0;}
+  .expand-head .sub{font-size:12px;color:var(--ink-soft);margin-top:2px;}
+  .expand-head button.remove-day{background:none;border:none;color:var(--ink-soft);font-size:11.5px;text-decoration:underline;cursor:pointer;padding:2px 0;flex-shrink:0;}
+  .expand-head .tentative{margin-top:12px;display:flex;justify-content:space-between;align-items:baseline;}
+  .expand-head .tentative .lbl{font-size:11px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.03em;}
+  .expand-head .tentative b{font-family:'IBM Plex Mono',monospace;font-size:18px;}
+
+  .activities{padding:6px 16px 4px;}
+  .activity{display:flex;gap:10px;padding:12px 0;border-bottom:1px solid var(--line);align-items:flex-start;}
+  .activity:last-child{border-bottom:none;}
+  .activity .reorder{display:flex;flex-direction:column;gap:1px;flex-shrink:0;padding-top:1px;}
+  .activity .reorder button{background:none;border:none;color:var(--ink-soft);cursor:pointer;font-size:9px;line-height:1;padding:3px 2px;}
+  .activity .reorder button:disabled{opacity:0.25;cursor:default;}
+  .activity .time{font-family:'IBM Plex Mono', monospace;font-size:11.5px;color:var(--ink-soft);width:56px;flex-shrink:0;padding-top:1px;}
+  .activity .body{flex:1;min-width:0;}
+  .activity .name-row{display:flex;align-items:center;gap:7px;flex-wrap:wrap;}
+  .activity .name{font-size:14px;font-weight:500;}
+  .activity .type-badge{font-size:9.5px;letter-spacing:0.03em;color:var(--ink-soft);background:var(--bg);border:1px solid var(--line);border-radius:4px;padding:2px 6px;flex-shrink:0;}
+  .activity .note{font-size:12px;color:var(--ink-soft);margin-top:4px;}
+  .activity .price{font-size:12px;color:var(--ink);font-weight:500;margin-top:2px;font-family:'IBM Plex Mono', monospace;}
+  .activity .actions{display:flex;flex-direction:column;gap:4px;flex-shrink:0;align-items:center;}
+  .activity .actions button{background:none;border:none;color:var(--ink-soft);cursor:pointer;font-size:14px;padding:2px 4px;transition:color 0.12s ease;}
+  .activity .actions button:active{color:var(--ink);}
+  .empty{font-size:13px;color:var(--ink-soft);padding:12px 0;font-style:italic;}
+
+  .add-activity-btn{
+    width:calc(100% - 32px);
+    margin:14px 16px 16px;
+    border:none;
+    background:var(--teal);
+    color:#fff;
+    border-radius:10px;
+    padding:13px;
+    font-size:14px;
+    font-weight:600;
+    cursor:pointer;
+    box-shadow:0 3px 10px rgba(42,157,143,0.28);
+    transition:transform 0.12s ease, box-shadow 0.12s ease;
+  }
+  .add-activity-btn:active{transform:scale(0.98);box-shadow:0 1px 5px rgba(42,157,143,0.28);}
+
+  /* Modals */
+  .modal-backdrop{
+    display:none;
+    position:fixed;inset:0;
+    background:rgba(27,42,46,0);
+    z-index:50;
+    align-items:flex-end;
+    justify-content:center;
+    transition:background 0.2s ease;
+  }
+  .modal-backdrop.open{display:flex;background:rgba(27,42,46,0.5);}
+  .modal-sheet{
+    background:var(--bg);
+    width:100%;
+    max-width:520px;
+    max-height:88vh;
+    overflow-y:auto;
+    border-radius:18px 18px 0 0;
+    padding-bottom:22px;
+    transform:translateY(16px);
+    opacity:0;
+    transition:transform 0.22s cubic-bezier(.32,.72,.35,1), opacity 0.18s ease;
+  }
+  .modal-backdrop.open .modal-sheet{transform:translateY(0);opacity:1;}
+  .modal-head{
+    position:sticky;top:0;
+    display:flex;justify-content:space-between;align-items:center;
+    background:var(--ink);color:var(--bg);
+    padding:15px 18px;
+    font-family:'Fraunces',serif;font-size:16px;font-weight:600;
+    border-radius:18px 18px 0 0;
+    z-index:2;
+  }
+  .modal-head button.modal-close{background:none;border:none;color:var(--bg);font-size:19px;cursor:pointer;padding:0 4px;line-height:1;}
+  .modal-body{padding:16px 18px 4px;}
+  .modal-body label{font-size:11px;text-transform:uppercase;letter-spacing:.03em;color:var(--ink-soft);display:block;margin:12px 0 4px;}
+  .modal-body input, .modal-body select{
+    width:100%;
+    border:1px solid var(--line);
+    border-radius:8px;
+    padding:11px 12px;
+    font-size:14px;
+    font-family:inherit;
+    background:var(--card);
+    color:var(--ink);
+    transition:border-color 0.12s ease;
+  }
+  .modal-body input:focus, .modal-body select:focus{outline:none;border-color:var(--teal);}
+  .modal-body .row2{display:flex;gap:8px;}
+  .modal-body .row2 > div{flex:1;}
+  .modal-body .row3{display:flex;gap:8px;}
+  .modal-body .row3 .grow{flex:2;}
+  .modal-body .row3 .small{flex:1;}
+  .modal-body button.save{
+    width:100%;
+    margin-top:20px;
+    border:none;background:var(--teal);color:#fff;
+    border-radius:10px;padding:13px;font-size:14px;font-weight:600;cursor:pointer;
+    box-shadow:0 3px 10px rgba(42,157,143,0.28);
+    transition:transform 0.12s ease;
+  }
+  .modal-body button.save:active{transform:scale(0.98);}
+  .modal-body button.save.secondary{
+    background:var(--card);color:var(--ink-soft);border:1px solid var(--line);box-shadow:none;margin-top:8px;
+  }
+  .staged-items{width:100%;margin-top:10px;}
+  .staged-items:not(:empty){border-top:1px dashed var(--line);padding-top:6px;}
+  .staged-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;gap:8px;}
+  .staged-row .desc{font-size:13px;flex:1;min-width:0;}
+  .staged-row .amt{font-family:'IBM Plex Mono',monospace;font-size:13px;}
+  .staged-row button{background:none;border:none;color:var(--ink-soft);font-size:15px;cursor:pointer;padding:0 2px;}
+  .add-line-row{display:flex;gap:6px;margin-top:10px;}
+  .add-line-row input{flex:1;min-width:0;}
+  .add-line-row button{
+    flex-shrink:0;border:none;background:var(--ink);color:var(--bg);
+    border-radius:8px;padding:0 14px;font-size:13px;cursor:pointer;
+  }
+
+  /* Expenses */
+  .totals-bar{
+    display:flex;justify-content:space-between;align-items:baseline;
+    background:var(--ink);color:var(--bg);border-radius:12px;padding:16px 18px;margin-bottom:16px;
+    box-shadow:var(--shadow);
+  }
+  .totals-bar .label{font-size:12px;color:#B9C6C6;}
+  .totals-bar .amount{font-family:'Fraunces', serif;font-size:26px;font-weight:600;}
+
+  .day-select{display:flex;gap:6px;overflow-x:auto;padding-bottom:12px;margin-bottom:4px;}
+  .day-select button{
+    flex-shrink:0;border:1px solid var(--line);background:var(--card);
+    padding:7px 12px;border-radius:20px;font-size:12px;
+    font-family:'IBM Plex Mono', monospace;color:var(--ink-soft);cursor:pointer;text-align:center;
+    transition:transform 0.1s ease;
+  }
+  .day-select button:active{transform:scale(0.95);}
+  .day-select button.active{background:var(--ink);color:var(--bg);border-color:var(--ink);}
+
+  .exp-card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:14px;box-shadow:var(--shadow);}
+  .exp-row{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--line);gap:8px;}
+  .exp-row:last-of-type{border-bottom:none;}
+  .exp-row .cat{font-size:10px;letter-spacing:0.03em;color:var(--ink-soft);background:var(--bg);border:1px solid var(--line);border-radius:4px;padding:2px 6px;flex-shrink:0;}
+  .exp-row .cat.auto{background:var(--teal-tint);border-color:var(--teal);color:var(--teal-deep);}
+  .exp-row .desc{flex:1;font-size:14px;min-width:0;}
+  .exp-row .amt{font-family:'IBM Plex Mono', monospace;font-size:14px;font-weight:500;}
+  .exp-row .del{background:none;border:none;color:var(--ink-soft);cursor:pointer;font-size:16px;padding:0 2px;}
+  .day-total{display:flex;justify-content:space-between;padding-top:10px;margin-top:2px;font-size:13px;color:var(--ink-soft);}
+
+  .exp-add{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px;}
+  .exp-add select, .exp-add input{border:1px solid var(--line);border-radius:8px;padding:8px 9px;font-size:13px;font-family:inherit;background:var(--bg);color:var(--ink);}
+  .exp-add .e-desc{flex:1 1 120px;min-width:0;}
+  .exp-add .e-amt{width:90px;}
+  .exp-add button.add{border:none;background:var(--ink);color:var(--bg);border-radius:8px;padding:0 13px;font-size:14px;cursor:pointer;}
+
+  /* Summary */
+  .sum-card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px;margin-bottom:14px;box-shadow:var(--shadow);}
+  .sum-card h3{font-family:'Fraunces', serif;font-size:15px;margin:0 0 12px;}
+  .bar-row{margin-bottom:10px;}
+  .bar-row .bar-top{display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;color:var(--ink-soft);}
+  .bar-track{height:7px;background:var(--line);border-radius:4px;overflow:hidden;}
+  .bar-fill{height:100%;border-radius:4px;}
+  .leg-total{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--line);}
+  .leg-total:last-child{border-bottom:none;}
+  .budget-row{display:flex;gap:8px;align-items:center;margin-top:10px;}
+  .budget-row input{border:1px solid var(--line);border-radius:8px;padding:8px 9px;font-size:13px;width:110px;font-family:inherit;background:var(--bg);color:var(--ink);}
+  .budget-row label{font-size:12px;color:var(--ink-soft);}
+
+  footer.hint{max-width:520px;margin:26px auto 0;padding:0 18px;font-size:11.5px;color:var(--ink-soft);line-height:1.5;}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="route-row">
+    <span class="route" id="hdr-route"></span>
+    <button class="hdr-edit" id="hdr-edit-btn">✎ Edit trip</button>
+  </div>
+  <h1 id="hdr-title">Trip</h1>
+  <div class="dates" id="hdr-dates"></div>
+</header>
+
+<nav class="tabs">
+  <button data-view="itinerary" class="active">Itinerary</button>
+  <button data-view="expenses">Expenses</button>
+  <button data-view="summary">Summary</button>
+  <button data-view="share">Share</button>
+</nav>
+
+<div class="wrap">
+<main>
+
+  <!-- ITINERARY -->
+  <section id="view-itinerary" class="view active">
+    <div class="day-strip" id="day-strip"></div>
+    <div id="day-expand"></div>
+  </section>
+
+  <!-- EXPENSES -->
+  <section id="view-expenses" class="view">
+    <div class="totals-bar">
+      <div><div class="label">Trip total so far</div><div class="amount" id="trip-total">₱0</div></div>
+      <div style="text-align:right"><div class="label">Days logged</div><div class="amount" id="days-logged" style="font-size:20px">0/0</div></div>
+    </div>
+    <div class="day-select" id="day-select"></div>
+    <div class="exp-card" id="exp-card"></div>
+  </section>
+
+  <!-- SUMMARY -->
+  <section id="view-summary" class="view">
+    <div class="sum-card"><h3>By day</h3><div id="day-totals"></div></div>
+    <div class="sum-card"><h3>By destination</h3><div id="leg-totals"></div></div>
+    <div class="sum-card"><h3>By category</h3><div id="cat-bars"></div></div>
+    <div class="sum-card">
+      <h3>Budget</h3>
+      <div class="budget-row">
+        <label>Set total budget</label>
+        <input type="number" id="budget-input" placeholder="e.g. 20000">
+        <span style="font-size:12px;color:var(--ink-soft)">PHP</span>
+      </div>
+      <div id="budget-status" style="margin-top:10px;font-size:13px;"></div>
+    </div>
+  </section>
+
+  <!-- SHARE -->
+  <section id="view-share" class="view">
+    <div class="sum-card">
+      <h3>Export your data</h3>
+      <p style="font-size:12.5px;color:var(--ink-soft);margin:0 0 12px;">Copy this code and send it to your partner (Messages, chat, email — anywhere). She pastes it into "Import data" on her phone to get everything you currently have here.</p>
+      <textarea id="exp-code" readonly rows="4" style="width:100%;border:1px solid var(--line);border-radius:8px;padding:10px;font-family:'IBM Plex Mono',monospace;font-size:11px;background:var(--bg);color:var(--ink);resize:none;"></textarea>
+      <div style="display:flex;gap:8px;margin-top:10px;">
+        <button id="exp-copy-btn" class="save" style="margin:0;flex:1;">Copy code</button>
+        <button id="exp-share-btn" class="save" style="margin:0;flex:1;display:none;">Share…</button>
+      </div>
+      <div id="exp-copied-msg" style="font-size:12px;color:var(--teal-deep);margin-top:8px;display:none;">Copied to clipboard.</div>
+    </div>
+    <div class="sum-card">
+      <h3>Import data</h3>
+      <p style="font-size:12.5px;color:var(--ink-soft);margin:0 0 12px;">Paste a code someone sent you below. This replaces everything currently on this device with what's in the code, so make sure you've exported your own data first if you want to keep it.</p>
+      <textarea id="imp-input" rows="4" placeholder="Paste code here" style="width:100%;border:1px solid var(--line);border-radius:8px;padding:10px;font-family:'IBM Plex Mono',monospace;font-size:11px;background:var(--card);color:var(--ink);resize:none;"></textarea>
+      <button id="imp-btn" class="save" style="margin-top:10px;">Import</button>
+    </div>
+  </section>
+
+</main>
+</div>
+
+<!-- Add Day modal -->
+<div class="modal-backdrop" id="addday-backdrop">
+  <div class="modal-sheet">
+    <div class="modal-head"><span>Add a day</span><button class="modal-close" id="addday-close">✕</button></div>
+    <div class="modal-body">
+      <label>Date</label>
+      <input type="date" id="nd-datepicker" min="2026-01-01" max="2036-12-31">
+      <label>Destination</label>
+      <select id="nd-dest"></select>
+      <label>Note (optional)</label>
+      <input type="text" id="nd-note" placeholder="e.g. Boracay → Cebu">
+      <button class="save" id="nd-add">Add day</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add/Edit Activity modal -->
+<div class="modal-backdrop" id="activity-modal-backdrop">
+  <div class="modal-sheet">
+    <div class="modal-head"><span id="am-title">Add activity</span><button class="modal-close" id="am-close">✕</button></div>
+    <div class="modal-body">
+      <div class="row3">
+        <div class="grow"><label>Time</label><input type="text" id="am-time" placeholder="9:00"></div>
+        <div class="small"><label>&nbsp;</label><select id="am-ampm"><option>AM</option><option>PM</option></select></div>
+      </div>
+      <label>Activity</label>
+      <input type="text" id="am-name" placeholder="e.g. Lunch at Halo Grill">
+      <label>Type</label>
+      <select id="am-type"></select>
+      <label id="am-item-label">Food to order</label>
+      <div class="row2">
+        <input type="text" id="am-item-text" placeholder="Item">
+        <input type="number" id="am-item-price" placeholder="Price (optional)" style="max-width:110px;">
+      </div>
+      <div class="add-line-row"><button id="am-add-line" style="width:100%;">+ Add line</button></div>
+      <div class="staged-items" id="am-staged"></div>
+      <button class="save" id="am-save">Save activity</button>
+      <button class="save secondary" id="am-cancel" style="display:none;">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Trip modal -->
+<div class="modal-backdrop" id="trip-backdrop">
+  <div class="modal-sheet">
+    <div class="modal-head"><span>Edit trip</span><button class="modal-close" id="trip-close">✕</button></div>
+    <div class="modal-body">
+      <label>Trip title</label>
+      <input type="text" id="tm-title" placeholder="e.g. Japan Spring Trip">
+      <label>Route / flight code (optional)</label>
+      <input type="text" id="tm-route" placeholder="e.g. MPH → CEB">
+      <button class="save" id="tm-save">Save</button>
+    </div>
+  </div>
+</div>
+
+<footer class="hint">Tap the browser's share icon and choose "Add to Home Screen" to open this like a regular app. Everything you enter is saved automatically on this device. Prices you add to an activity are automatically logged as expenses for that day.</footer>
+
+<script>
+const DEFAULT_DAYS = [
+  {id:'d6',  label:'Sun',  date:'Dec 6',  dest:'boracay'},
+  {id:'d7',  label:'Mon',  date:'Dec 7',  dest:'boracay'},
+  {id:'d8',  label:'Tue',  date:'Dec 8',  dest:'boracay'},
+  {id:'d9',  label:'Wed',  date:'Dec 9',  dest:'transit', label2:'Boracay → Cebu'},
+  {id:'d10', label:'Thu',  date:'Dec 10', dest:'cebu'},
+  {id:'d11', label:'Fri',  date:'Dec 11', dest:'cebu'},
+];
+const DEST_OPTIONS = [
+  {value:'boracay', label:'Boracay'},
+  {value:'cebu', label:'Cebu'},
+  {value:'transit', label:'Transit'},
+  {value:'other', label:'Other'},
+];
+const ACTIVITY_TYPES = {
+  restaurant:    {label:'Restaurant',     detailLabel:'Food to order',     priceLabel:'Tentative price', category:'Food'},
+  beach:         {label:'Beach',          detailLabel:'Note',              priceLabel:'Tentative price', category:'Activities'},
+  transportation:{label:'Transportation', detailLabel:'Type of transport', priceLabel:'Fee',             category:'Transport'},
+  sightseeing:   {label:'Sightseeing',    detailLabel:'Note',              priceLabel:'Tentative price', category:'Activities'},
+  accommodation: {label:'Accommodation',  detailLabel:'Note',              priceLabel:'Tentative price', category:'Accommodation'},
+  shopping:      {label:'Shopping',       detailLabel:'What to buy',       priceLabel:'Tentative price', category:'Shopping'},
+  other:         {label:'Other',          detailLabel:'Note',              priceLabel:'Tentative price', category:'Other'},
+};
+const CATEGORIES = ['Transport','Food','Accommodation','Activities','Shopping','Other'];
+const STORAGE_KEY = 'trip-boracay-cebu';
+
+let DAYS = DEFAULT_DAYS.slice();
+
+let state = {
+  days: null,
+  trip: {title:'Boracay → Cebu', route:'MPH → CEB'},
+  itinerary: {},
+  expenses: {},
+  budget: null
+};
+
+function ensureDayBuckets(){
+  DAYS.forEach(d => { state.itinerary[d.id] = state.itinerary[d.id] || []; state.expenses[d.id] = state.expenses[d.id] || []; });
+}
+ensureDayBuckets();
+
+let activeExpenseDay = DAYS[0].id;
+let activeItinDay = DAYS[0].id;
+let saveTimer = null;
+let modalDraft = null; // {dayId, editIndex, items:[]} while the activity modal is open
+
+const storageAdapter = (window.storage && typeof window.storage.get === 'function') ? {
+  get: (k) => window.storage.get(k, false),
+  set: (k, v) => window.storage.set(k, v, false)
+} : {
+  get: async (k) => {
+    const v = localStorage.getItem(k);
+    return v !== null ? {value: v} : null;
+  },
+  set: async (k, v) => { localStorage.setItem(k, v); return {value: v}; }
+};
+
+function round2(n){ return Math.round((Number(n||0) + Number.EPSILON) * 100) / 100; }
+function sumBy(arr, getter){ return round2((arr||[]).reduce((s,x) => round2(s + round2(getter(x))), 0)); }
+function fmt(n){ return '₱' + round2(n).toLocaleString('en-PH', {minimumFractionDigits:0, maximumFractionDigits:2}); }
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+
+/* ---------- SHARE (export/import code) ---------- */
+function encodeState(){
+  const json = JSON.stringify(state);
+  const bytes = new TextEncoder().encode(json);
+  let binary = '';
+  bytes.forEach(b => { binary += String.fromCharCode(b); });
+  return btoa(binary);
+}
+function decodeState(code){
+  const binary = atob(code.trim());
+  const bytes = new Uint8Array(binary.length);
+  for(let i=0;i<binary.length;i++) bytes[i] = binary.charCodeAt(i);
+  const json = new TextDecoder().decode(bytes);
+  return JSON.parse(json);
+}
+function renderShareExport(){
+  document.getElementById('exp-code').value = encodeState();
+  document.getElementById('exp-copied-msg').style.display = 'none';
+}
+document.getElementById('exp-copy-btn').addEventListener('click', async () => {
+  const ta = document.getElementById('exp-code');
+  ta.select();
+  ta.setSelectionRange(0, ta.value.length);
+  try{
+    await navigator.clipboard.writeText(ta.value);
+  }catch(e){
+    try{ document.execCommand('copy'); }catch(e2){ /* selection still lets them copy manually */ }
+  }
+  const msg = document.getElementById('exp-copied-msg');
+  msg.style.display = 'block';
+  setTimeout(() => { msg.style.display = 'none'; }, 2500);
+});
+if(navigator.share){
+  document.getElementById('exp-share-btn').style.display = 'block';
+  document.getElementById('exp-share-btn').addEventListener('click', () => {
+    navigator.share({title: state.trip.title || 'Trip data', text: document.getElementById('exp-code').value}).catch(()=>{});
+  });
+}
+document.getElementById('imp-btn').addEventListener('click', () => {
+  const raw = document.getElementById('imp-input').value.trim();
+  if(!raw) return;
+  if(!confirm('This replaces all itinerary, expenses, and settings currently on this device with the incoming data. Continue?')) return;
+  let incoming;
+  try{
+    incoming = decodeState(raw);
+  }catch(e){
+    alert("That code looks invalid or incomplete. Double-check you copied the whole thing.");
+    return;
+  }
+  state = Object.assign({days:null, trip:{title:'Trip',route:''}, itinerary:{}, expenses:{}, budget:null}, incoming);
+  state.trip = Object.assign({title:'Trip', route:''}, incoming.trip || {});
+  DAYS = (state.days && state.days.length) ? state.days : DEFAULT_DAYS.slice();
+  state.days = DAYS;
+  ensureDayBuckets();
+  activeItinDay = DAYS[0] ? DAYS[0].id : null;
+  activeExpenseDay = DAYS[0] ? DAYS[0].id : null;
+  scheduleSave();
+  renderAll();
+  document.getElementById('imp-input').value = '';
+  alert('Import successful.');
+});
+
+function parseTimeToMinutes(str, ampm){
+  if(!str) return null;
+  const m = String(str).trim().match(/^(\d{1,2})(?::(\d{1,2}))?$/);
+  if(!m) return null;
+  let h = parseInt(m[1],10) % 12;
+  const min = m[2] ? parseInt(m[2],10) : 0;
+  if(ampm === 'PM') h += 12;
+  return h*60+min;
+}
+function sortActivities(dayId){
+  state.itinerary[dayId].sort((a,b) => {
+    const av = (a.timeSort===undefined||a.timeSort===null) ? Infinity : a.timeSort;
+    const bv = (b.timeSort===undefined||b.timeSort===null) ? Infinity : b.timeSort;
+    return av - bv;
+  });
+}
+
+function saveNow(){
+  clearTimeout(saveTimer);
+  try{
+    if(!(window.storage && typeof window.storage.get === 'function')){
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    } else {
+      storageAdapter.set(STORAGE_KEY, JSON.stringify(state)).catch(e => console.error('save failed', e));
+    }
+  }catch(e){ console.error('save failed', e); }
+}
+function scheduleSave(){
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(saveNow, 80);
+}
+document.addEventListener('visibilitychange', () => { if(document.hidden) saveNow(); });
+window.addEventListener('pagehide', saveNow);
+
+async function load(){
+  try{
+    const res = await storageAdapter.get(STORAGE_KEY);
+    if(res && res.value){
+      const parsed = JSON.parse(res.value);
+      state = Object.assign(state, parsed);
+      if(parsed.trip) state.trip = Object.assign({title:'Trip', route:''}, parsed.trip);
+    }
+  }catch(e){ /* no saved data yet */ }
+  DAYS = (state.days && state.days.length) ? state.days : DEFAULT_DAYS.slice();
+  state.days = DAYS;
+  ensureDayBuckets();
+  activeExpenseDay = DAYS[0] ? DAYS[0].id : null;
+  activeItinDay = DAYS[0] ? DAYS[0].id : null;
+  document.getElementById('nd-dest').innerHTML = DEST_OPTIONS.map(o=>`<option value="${o.value}">${o.label}</option>`).join('');
+  document.getElementById('am-type').innerHTML = Object.entries(ACTIVITY_TYPES).map(([k,v])=>`<option value="${k}">${v.label}</option>`).join('');
+  renderAll();
+}
+
+function renderAll(){
+  renderHeader();
+  renderDayStrip();
+  renderDayExpand();
+  renderExpenseTabs();
+  renderExpenses();
+  renderSummary();
+}
+
+/* ---------- HEADER / TRIP ---------- */
+function formatDateRange(){
+  if(!DAYS.length) return '';
+  if(DAYS.length === 1) return DAYS[0].date;
+  const a = DAYS[0], b = DAYS[DAYS.length-1];
+  const yearA = a.iso ? a.iso.slice(0,4) : (String(a.date).match(/\d{4}/)||[])[0];
+  const yearB = b.iso ? b.iso.slice(0,4) : (String(b.date).match(/\d{4}/)||[])[0];
+  if(yearA && yearA === yearB){
+    const aShort = String(a.date).replace(/,?\s*\d{4}$/, '');
+    return `${aShort} – ${b.date}`;
+  }
+  return `${a.date} – ${b.date}`;
+}
+function renderHeader(){
+  document.getElementById('hdr-title').textContent = state.trip.title || 'Trip';
+  const dateRange = formatDateRange();
+  document.getElementById('hdr-route').textContent = [state.trip.route, dateRange].filter(Boolean).join(' · ');
+  document.getElementById('hdr-dates').textContent = DAYS.length ? `${DAYS.length} day${DAYS.length>1?'s':''} planned` : 'No days yet';
+}
+function openTripModal(){
+  document.getElementById('tm-title').value = state.trip.title || '';
+  document.getElementById('tm-route').value = state.trip.route || '';
+  document.getElementById('trip-backdrop').classList.add('open');
+}
+function closeTripModal(){ document.getElementById('trip-backdrop').classList.remove('open'); }
+document.getElementById('hdr-edit-btn').addEventListener('click', openTripModal);
+document.getElementById('trip-close').addEventListener('click', closeTripModal);
+document.getElementById('trip-backdrop').addEventListener('click', e => { if(e.target.id==='trip-backdrop') closeTripModal(); });
+document.getElementById('tm-save').addEventListener('click', () => {
+  state.trip = {
+    title: document.getElementById('tm-title').value.trim() || 'Trip',
+    route: document.getElementById('tm-route').value.trim()
+  };
+  scheduleSave();
+  renderHeader();
+  closeTripModal();
+});
+
+/* ---------- ITINERARY ---------- */
+function legClass(dest){ return dest==='cebu' ? 'cebu' : 'boracay'; }
+function legHeading(dest){
+  if(dest==='boracay') return 'Boracay';
+  if(dest==='cebu') return 'Cebu';
+  if(dest==='transit') return 'Transit day';
+  return 'Other';
+}
+function activityTotal(a){ return sumBy(a.items || [], it => it.price || 0); }
+function dayTentativeTotal(dayId){ return sumBy(state.itinerary[dayId] || [], a => activityTotal(a)); }
+function chipDayNum(d){
+  if(d.dayNum) return d.dayNum;
+  const m = String(d.date||'').match(/\d+/);
+  return m ? m[0] : '';
+}
+
+function renderDayStrip(){
+  const el = document.getElementById('day-strip');
+  let html = DAYS.map(d => {
+    const t = dayTentativeTotal(d.id);
+    return `<div class="day-chip ${legClass(d.dest)} ${d.id===activeItinDay?'active':''}" data-day="${d.id}">
+      <span class="dow">${escapeHtml(d.label)}</span>
+      <span class="num">${escapeHtml(chipDayNum(d))}</span>
+      ${t>0 ? `<span class="amt">${fmt(t)}</span>` : ''}
+    </div>`;
+  }).join('');
+  html += `<div class="day-chip add-day" id="add-day-chip"><span class="plus">+</span><span style="font-size:10px;">Add day</span></div>`;
+  el.innerHTML = html;
+  el.querySelectorAll('.day-chip[data-day]').forEach(chip => chip.addEventListener('click', () => {
+    activeItinDay = chip.dataset.day;
+    renderDayStrip(); renderDayExpand();
+  }));
+  document.getElementById('add-day-chip').addEventListener('click', openAddDayModal);
+}
+
+function renderDayExpand(){
+  const el = document.getElementById('day-expand');
+  const d = DAYS.find(x => x.id === activeItinDay);
+  if(!d){
+    el.innerHTML = '<div class="empty">No days yet — tap "Add day" above to start.</div>';
+    return;
+  }
+  const acts = state.itinerary[d.id] || [];
+  const total = dayTentativeTotal(d.id);
+
+  el.innerHTML = `
+    <div class="expand-card ${legClass(d.dest)}">
+      <div class="expand-head">
+        <div class="row1">
+          <div>
+            <h2>${legHeading(d.dest)} · ${escapeHtml(d.label)}${d.label2 ? ' · '+escapeHtml(d.label2):''}</h2>
+            <div class="sub">${escapeHtml(d.date)}</div>
+          </div>
+          <button class="remove-day" id="remove-day-btn">Remove day</button>
+        </div>
+        <div class="tentative"><span class="lbl">Tentative total</span><b>${fmt(total)}</b></div>
+      </div>
+      <div class="activities" id="acts-${d.id}">
+        ${acts.length ? acts.map((a,i) => {
+          const t = ACTIVITY_TYPES[a.type] || ACTIVITY_TYPES.other;
+          const items = a.items || [];
+          const subtotal = activityTotal(a);
+          const timeLabel = a.time ? `${a.time}${a.ampm ? ' '+a.ampm : ''}` : '';
+          return `
+          <div class="activity">
+            <div class="reorder">
+              <button data-idx="${i}" data-dir="up" ${i===0?'disabled':''}>▲</button>
+              <button data-idx="${i}" data-dir="down" ${i===acts.length-1?'disabled':''}>▼</button>
+            </div>
+            <div class="time">${timeLabel}</div>
+            <div class="body">
+              <div class="name-row"><span class="name">${escapeHtml(a.name)}</span><span class="type-badge">${t.label}</span></div>
+              ${items.length ? `
+                <div class="note" style="margin-top:4px;">
+                  <div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.03em;color:var(--ink-soft);margin-bottom:2px;">${escapeHtml(t.detailLabel)}</div>
+                  ${items.map(it => `<div style="display:flex;justify-content:space-between;gap:8px;"><span>${escapeHtml(it.text)}</span>${it.price?`<span style="font-family:'IBM Plex Mono',monospace;">${fmt(it.price)}</span>`:''}</div>`).join('')}
+                </div>` : ''}
+              ${subtotal>0 ? `<div class="price">Subtotal: ~${fmt(subtotal)} · logged as expense</div>` : ''}
+            </div>
+            <div class="actions">
+              <button data-idx="${i}" data-kind="edit" title="Edit">✎</button>
+              <button data-idx="${i}" data-kind="del" title="Delete">✕</button>
+            </div>
+          </div>`;
+        }).join('') : '<div class="empty">Nothing planned yet</div>'}
+      </div>
+      <button class="add-activity-btn" id="open-add-activity">+ Add activity</button>
+    </div>
+  `;
+
+  document.getElementById('remove-day-btn').addEventListener('click', () => removeDay(d.id));
+  document.getElementById('open-add-activity').addEventListener('click', () => openActivityModal(d.id, null));
+  el.querySelectorAll('button[data-kind="del"]').forEach(b => b.addEventListener('click', e => {
+    deleteActivity(d.id, +e.currentTarget.dataset.idx);
+  }));
+  el.querySelectorAll('button[data-kind="edit"]').forEach(b => b.addEventListener('click', e => {
+    openActivityModal(d.id, +e.currentTarget.dataset.idx);
+  }));
+  el.querySelectorAll('.reorder button').forEach(b => b.addEventListener('click', e => {
+    moveActivity(d.id, +e.currentTarget.dataset.idx, e.currentTarget.dataset.dir);
+  }));
+}
+
+function deleteActivity(dayId, idx){
+  const activity = state.itinerary[dayId][idx];
+  state.itinerary[dayId].splice(idx, 1);
+  if(activity && activity.id){
+    state.expenses[dayId] = state.expenses[dayId].filter(x => x.srcActivityId !== activity.id);
+  }
+  scheduleSave();
+  renderDayStrip(); renderDayExpand();
+  renderExpenseTabs(); renderExpenses(); renderSummary(); updateTotalsBar();
+}
+
+function moveActivity(dayId, idx, dir){
+  const list = state.itinerary[dayId];
+  const target = dir === 'up' ? idx - 1 : idx + 1;
+  if(target < 0 || target >= list.length) return;
+  [list[idx], list[target]] = [list[target], list[idx]];
+  scheduleSave();
+  renderDayStrip(); renderDayExpand();
+}
+
+function removeDay(dayId){
+  if(!confirm('Remove this day and its logged activities and expenses?')) return;
+  DAYS = DAYS.filter(d => d.id !== dayId);
+  state.days = DAYS;
+  delete state.itinerary[dayId];
+  delete state.expenses[dayId];
+  if(activeItinDay === dayId) activeItinDay = DAYS[0] ? DAYS[0].id : null;
+  if(activeExpenseDay === dayId) activeExpenseDay = DAYS[0] ? DAYS[0].id : null;
+  scheduleSave();
+  renderAll();
+}
+
+/* ---------- ADD DAY MODAL ---------- */
+function openAddDayModal(){
+  document.getElementById('nd-datepicker').value = '';
+  document.getElementById('nd-dest').value = 'boracay';
+  document.getElementById('nd-note').value = '';
+  document.getElementById('addday-backdrop').classList.add('open');
+}
+function closeAddDayModal(){ document.getElementById('addday-backdrop').classList.remove('open'); }
+document.getElementById('addday-close').addEventListener('click', closeAddDayModal);
+document.getElementById('addday-backdrop').addEventListener('click', e => { if(e.target.id === 'addday-backdrop') closeAddDayModal(); });
+document.getElementById('nd-add').addEventListener('click', () => {
+  const iso = document.getElementById('nd-datepicker').value;
+  const dest = document.getElementById('nd-dest').value;
+  const note = document.getElementById('nd-note').value.trim();
+  if(!iso){ document.getElementById('nd-datepicker').focus(); return; }
+  const [y, m, dd] = iso.split('-').map(Number);
+  const dateObj = new Date(y, m - 1, dd);
+  const label = dateObj.toLocaleDateString('en-US', {weekday:'short'});
+  const month = dateObj.toLocaleDateString('en-US', {month:'short'});
+  const dayNum = String(dateObj.getDate());
+  const date = `${month} ${dayNum}, ${y}`;
+  const id = 'custom-' + Date.now();
+  const newDay = {id, label, date, dayNum, iso, dest};
+  if(note) newDay.label2 = note;
+  DAYS.push(newDay);
+  state.days = DAYS;
+  ensureDayBuckets();
+  activeItinDay = id;
+  scheduleSave();
+  closeAddDayModal();
+  renderHeader();
+  renderDayStrip(); renderDayExpand();
+});
+
+/* ---------- ADD/EDIT ACTIVITY MODAL ---------- */
+function openActivityModal(dayId, editIndex){
+  const a = (editIndex != null) ? state.itinerary[dayId][editIndex] : null;
+  modalDraft = {dayId, editIndex, items: a ? (a.items||[]).map(it => ({text: it.text, price: it.price})) : []};
+
+  document.getElementById('am-title').textContent = a ? 'Edit activity' : 'Add activity';
+  document.getElementById('am-save').textContent = a ? 'Update activity' : 'Save activity';
+  document.getElementById('am-cancel').style.display = a ? 'block' : 'none';
+  document.getElementById('am-time').value = a ? (a.time || '') : '';
+  document.getElementById('am-ampm').value = a ? (a.ampm || 'AM') : 'AM';
+  document.getElementById('am-name').value = a ? a.name : '';
+  document.getElementById('am-type').value = a ? a.type : 'restaurant';
+  document.getElementById('am-item-text').value = '';
+  document.getElementById('am-item-price').value = '';
+  syncItemLabel();
+  renderModalStagedItems();
+
+  document.getElementById('activity-modal-backdrop').classList.add('open');
+  setTimeout(() => document.getElementById('am-name').focus(), 60);
+}
+function closeActivityModal(){
+  document.getElementById('activity-modal-backdrop').classList.remove('open');
+  modalDraft = null;
+}
+function syncItemLabel(){
+  const type = document.getElementById('am-type').value;
+  const t = ACTIVITY_TYPES[type] || ACTIVITY_TYPES.other;
+  document.getElementById('am-item-label').textContent = t.detailLabel;
+  document.getElementById('am-item-text').placeholder = t.detailLabel;
+}
+function renderModalStagedItems(){
+  const el = document.getElementById('am-staged');
+  const items = modalDraft.items;
+  el.innerHTML = items.map((it,i) => `
+    <div class="staged-row">
+      <span class="desc">${escapeHtml(it.text)}</span>
+      ${it.price ? `<span class="amt">${fmt(it.price)}</span>` : ''}
+      <button data-idx="${i}">✕</button>
+    </div>`).join('');
+  el.querySelectorAll('button').forEach(b => b.addEventListener('click', e => {
+    modalDraft.items.splice(+e.currentTarget.dataset.idx, 1);
+    renderModalStagedItems();
+  }));
+}
+
+document.getElementById('am-close').addEventListener('click', closeActivityModal);
+document.getElementById('am-cancel').addEventListener('click', closeActivityModal);
+document.getElementById('activity-modal-backdrop').addEventListener('click', e => { if(e.target.id==='activity-modal-backdrop') closeActivityModal(); });
+document.getElementById('am-type').addEventListener('change', syncItemLabel);
+document.getElementById('am-add-line').addEventListener('click', () => {
+  const textInput = document.getElementById('am-item-text');
+  const priceInput = document.getElementById('am-item-price');
+  const text = textInput.value.trim();
+  const price = priceInput.value ? parseFloat(priceInput.value) : null;
+  if(!text) return;
+  modalDraft.items.push({text, price});
+  textInput.value=''; priceInput.value=''; textInput.focus();
+  renderModalStagedItems();
+});
+document.getElementById('am-save').addEventListener('click', () => {
+  const dayId = modalDraft.dayId;
+  const time = document.getElementById('am-time').value.trim();
+  const ampm = document.getElementById('am-ampm').value;
+  const name = document.getElementById('am-name').value.trim();
+  const type = document.getElementById('am-type').value;
+  if(!name){ document.getElementById('am-name').focus(); return; }
+  const items = modalDraft.items.slice();
+  const timeSort = parseTimeToMinutes(time, ampm);
+
+  let id;
+  if(modalDraft.editIndex != null){
+    id = state.itinerary[dayId][modalDraft.editIndex].id;
+    state.expenses[dayId] = state.expenses[dayId].filter(x => x.srcActivityId !== id);
+  } else {
+    id = 'act-' + Date.now() + '-' + Math.floor(Math.random()*10000);
+  }
+  const activity = {id, time, ampm, timeSort, name, type, items};
+  if(modalDraft.editIndex != null){
+    state.itinerary[dayId][modalDraft.editIndex] = activity;
+  } else {
+    state.itinerary[dayId].push(activity);
+  }
+  sortActivities(dayId);
+
+  const cat = (ACTIVITY_TYPES[type] || ACTIVITY_TYPES.other).category;
+  items.forEach(it => {
+    if(it.price && it.price > 0){
+      state.expenses[dayId].push({
+        cat, desc: name + (it.text ? ' — ' + it.text : ''), amt: round2(it.price),
+        auto: true, srcActivityId: id
+      });
+    }
+  });
+
+  closeActivityModal();
+  scheduleSave();
+  renderDayStrip(); renderDayExpand();
+  renderExpenseTabs(); renderExpenses(); renderSummary(); updateTotalsBar();
+});
+
+/* ---------- EXPENSES ---------- */
+function renderExpenseTabs(){
+  const el = document.getElementById('day-select');
+  el.innerHTML = DAYS.map(d => {
+    const t = sumBy(state.expenses[d.id], x => x.amt || 0);
+    return `<button data-day="${d.id}" class="${d.id===activeExpenseDay?'active':''}">${d.label} ${chipDayNum(d)}${t>0 ? `<br><span style="font-size:10px;">${fmt(t)}</span>` : ''}</button>`;
+  }).join('');
+  el.querySelectorAll('button').forEach(b => b.addEventListener('click', e => {
+    activeExpenseDay = e.currentTarget.dataset.day;
+    renderExpenseTabs(); renderExpenses();
+  }));
+}
+
+function renderExpenses(){
+  const el = document.getElementById('exp-card');
+  if(!activeExpenseDay){ el.innerHTML = '<div class="empty">No days yet</div>'; return; }
+  const list = state.expenses[activeExpenseDay] || [];
+  const dayTotal = sumBy(list, x => x.amt || 0);
+  el.innerHTML = `
+    ${list.length ? list.map((x,i)=>`
+      <div class="exp-row">
+        <span class="cat ${x.auto?'auto':''}">${x.auto ? 'Planned' : x.cat}</span>
+        <span class="desc">${escapeHtml(x.desc)}</span>
+        <span class="amt">${fmt(x.amt)}</span>
+        <button class="del" data-idx="${i}">✕</button>
+      </div>`).join('') : '<div class="empty">No expenses logged for this day</div>'}
+    <div class="day-total"><span>Day total</span><span>${fmt(dayTotal)}</span></div>
+    <div class="exp-add">
+      <select id="e-cat">${CATEGORIES.map(c=>`<option value="${c}">${c}</option>`).join('')}</select>
+      <input class="e-desc" id="e-desc" type="text" placeholder="Description">
+      <input class="e-amt" id="e-amt" type="number" placeholder="Amount">
+      <button class="add" id="e-add">Add</button>
+    </div>
+  `;
+  el.querySelectorAll('button.del').forEach(b => b.addEventListener('click', e => {
+    state.expenses[activeExpenseDay].splice(+e.target.dataset.idx,1);
+    scheduleSave(); renderExpenses(); renderExpenseTabs(); renderSummary(); updateTotalsBar(); renderDayStrip(); renderDayExpand();
+  }));
+  document.getElementById('e-add').addEventListener('click', () => {
+    const cat = document.getElementById('e-cat').value;
+    const desc = document.getElementById('e-desc').value.trim();
+    const amt = parseFloat(document.getElementById('e-amt').value);
+    if(!desc || !amt) return;
+    state.expenses[activeExpenseDay].push({cat, desc, amt: round2(amt)});
+    scheduleSave(); renderExpenses(); renderExpenseTabs(); renderSummary(); updateTotalsBar();
+  });
+  updateTotalsBar();
+}
+
+function updateTotalsBar(){
+  let total = 0, daysWithData = 0;
+  DAYS.forEach(d => {
+    const t = sumBy(state.expenses[d.id], x => x.amt || 0);
+    if(t>0) daysWithData++;
+    total = round2(total + t);
+  });
+  document.getElementById('trip-total').textContent = fmt(total);
+  document.getElementById('days-logged').textContent = daysWithData + '/' + DAYS.length;
+}
+
+/* ---------- SUMMARY ---------- */
+function renderSummary(){
+  const dayEl = document.getElementById('day-totals');
+  dayEl.innerHTML = DAYS.length ? DAYS.map(d => {
+    const t = sumBy(state.expenses[d.id], x => x.amt || 0);
+    return `<div class="leg-total"><span>${escapeHtml(d.label)} · ${escapeHtml(d.date)}</span><b>${fmt(t)}</b></div>`;
+  }).join('') : '<div class="empty">No days yet</div>';
+
+  const legTotals = {};
+  const legDates = {};
+  DAYS.forEach(d => {
+    const t = sumBy(state.expenses[d.id], x => x.amt || 0);
+    legTotals[d.dest] = round2((legTotals[d.dest]||0) + t);
+    legDates[d.dest] = legDates[d.dest] || [];
+    legDates[d.dest].push(d.date);
+  });
+  const legEl = document.getElementById('leg-totals');
+  const destKeys = Object.keys(legTotals);
+  legEl.innerHTML = destKeys.length ? destKeys.map(k => {
+    const dates = legDates[k];
+    const range = dates.length > 1 ? `${dates[0]}–${dates[dates.length-1]}` : dates[0];
+    return `<div class="leg-total"><span>${legHeading(k)} (${escapeHtml(range)})</span><b>${fmt(legTotals[k])}</b></div>`;
+  }).join('') : '<div class="empty">No days yet</div>';
+
+  const catTotals = {};
+  CATEGORIES.forEach(c => catTotals[c] = 0);
+  let grand = 0;
+  Object.values(state.expenses).forEach(list => (list||[]).forEach(x => {
+    catTotals[x.cat] = round2((catTotals[x.cat]||0) + Number(x.amt||0));
+    grand = round2(grand + Number(x.amt||0));
+  }));
+  const catEl = document.getElementById('cat-bars');
+  if(grand <= 0){
+    catEl.innerHTML = '<div class="empty">Log some expenses to see the breakdown</div>';
+  } else {
+    catEl.innerHTML = CATEGORIES.filter(c => catTotals[c] > 0).map(c => {
+      const pct = Math.round((catTotals[c]/grand)*100);
+      return `<div class="bar-row">
+        <div class="bar-top"><span>${c}</span><span>${fmt(catTotals[c])} · ${pct}%</span></div>
+        <div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:var(--teal)"></div></div>
+      </div>`;
+    }).join('');
+  }
+
+  const budgetInput = document.getElementById('budget-input');
+  if(document.activeElement !== budgetInput) budgetInput.value = state.budget || '';
+  const statusEl = document.getElementById('budget-status');
+  if(state.budget){
+    const remaining = round2(state.budget - grand);
+    const over = remaining < 0;
+    statusEl.innerHTML = over
+      ? `<span style="color:var(--rust-deep)">${fmt(Math.abs(remaining))} over budget</span>`
+      : `<span style="color:var(--teal-deep)">${fmt(remaining)} remaining</span> of ${fmt(state.budget)}`;
+  } else {
+    statusEl.innerHTML = '';
+  }
+}
+
+document.getElementById('budget-input').addEventListener('input', e => {
+  state.budget = e.target.value ? parseFloat(e.target.value) : null;
+  scheduleSave(); renderSummary();
+});
+
+/* ---------- TABS ---------- */
+document.querySelectorAll('nav.tabs button').forEach(b => {
+  b.addEventListener('click', () => {
+    document.querySelectorAll('nav.tabs button').forEach(x=>x.classList.remove('active'));
+    document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+    document.getElementById('view-' + b.dataset.view).classList.add('active');
+    if(b.dataset.view === 'share') renderShareExport();
+  });
+});
+
+load();
+
+if('serviceWorker' in navigator){
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch(() => {});
+  });
+}
+</script>
+</body>
+</html>
