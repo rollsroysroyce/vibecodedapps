@@ -379,10 +379,8 @@
   <div class="modal-sheet">
     <div class="modal-head"><span>Add a day</span><button class="modal-close" id="addday-close">✕</button></div>
     <div class="modal-body">
-      <label>Day label</label>
-      <input type="text" id="nd-label" placeholder="e.g. Sat">
       <label>Date</label>
-      <input type="text" id="nd-date" placeholder="e.g. Dec 12">
+      <input type="date" id="nd-datepicker" min="2026-01-01" max="2036-12-31">
       <label>Destination</label>
       <select id="nd-dest"></select>
       <label>Note (optional)</label>
@@ -624,9 +622,21 @@ function renderAll(){
 }
 
 /* ---------- HEADER / TRIP ---------- */
+function formatDateRange(){
+  if(!DAYS.length) return '';
+  if(DAYS.length === 1) return DAYS[0].date;
+  const a = DAYS[0], b = DAYS[DAYS.length-1];
+  const yearA = a.iso ? a.iso.slice(0,4) : (String(a.date).match(/\d{4}/)||[])[0];
+  const yearB = b.iso ? b.iso.slice(0,4) : (String(b.date).match(/\d{4}/)||[])[0];
+  if(yearA && yearA === yearB){
+    const aShort = String(a.date).replace(/,?\s*\d{4}$/, '');
+    return `${aShort} – ${b.date}`;
+  }
+  return `${a.date} – ${b.date}`;
+}
 function renderHeader(){
   document.getElementById('hdr-title').textContent = state.trip.title || 'Trip';
-  const dateRange = DAYS.length ? (DAYS.length>1 ? `${DAYS[0].date} – ${DAYS[DAYS.length-1].date}` : DAYS[0].date) : '';
+  const dateRange = formatDateRange();
   document.getElementById('hdr-route').textContent = [state.trip.route, dateRange].filter(Boolean).join(' · ');
   document.getElementById('hdr-dates').textContent = DAYS.length ? `${DAYS.length} day${DAYS.length>1?'s':''} planned` : 'No days yet';
 }
@@ -659,6 +669,11 @@ function legHeading(dest){
 }
 function activityTotal(a){ return sumBy(a.items || [], it => it.price || 0); }
 function dayTentativeTotal(dayId){ return sumBy(state.itinerary[dayId] || [], a => activityTotal(a)); }
+function chipDayNum(d){
+  if(d.dayNum) return d.dayNum;
+  const m = String(d.date||'').match(/\d+/);
+  return m ? m[0] : '';
+}
 
 function renderDayStrip(){
   const el = document.getElementById('day-strip');
@@ -666,7 +681,7 @@ function renderDayStrip(){
     const t = dayTentativeTotal(d.id);
     return `<div class="day-chip ${legClass(d.dest)} ${d.id===activeItinDay?'active':''}" data-day="${d.id}">
       <span class="dow">${escapeHtml(d.label)}</span>
-      <span class="num">${escapeHtml(d.date.split(' ').pop())}</span>
+      <span class="num">${escapeHtml(chipDayNum(d))}</span>
       ${t>0 ? `<span class="amt">${fmt(t)}</span>` : ''}
     </div>`;
   }).join('');
@@ -781,8 +796,7 @@ function removeDay(dayId){
 
 /* ---------- ADD DAY MODAL ---------- */
 function openAddDayModal(){
-  document.getElementById('nd-label').value = '';
-  document.getElementById('nd-date').value = '';
+  document.getElementById('nd-datepicker').value = '';
   document.getElementById('nd-dest').value = 'boracay';
   document.getElementById('nd-note').value = '';
   document.getElementById('addday-backdrop').classList.add('open');
@@ -791,13 +805,18 @@ function closeAddDayModal(){ document.getElementById('addday-backdrop').classLis
 document.getElementById('addday-close').addEventListener('click', closeAddDayModal);
 document.getElementById('addday-backdrop').addEventListener('click', e => { if(e.target.id === 'addday-backdrop') closeAddDayModal(); });
 document.getElementById('nd-add').addEventListener('click', () => {
-  const label = document.getElementById('nd-label').value.trim() || '—';
-  const date = document.getElementById('nd-date').value.trim();
+  const iso = document.getElementById('nd-datepicker').value;
   const dest = document.getElementById('nd-dest').value;
   const note = document.getElementById('nd-note').value.trim();
-  if(!date){ document.getElementById('nd-date').focus(); return; }
+  if(!iso){ document.getElementById('nd-datepicker').focus(); return; }
+  const [y, m, dd] = iso.split('-').map(Number);
+  const dateObj = new Date(y, m - 1, dd);
+  const label = dateObj.toLocaleDateString('en-US', {weekday:'short'});
+  const month = dateObj.toLocaleDateString('en-US', {month:'short'});
+  const dayNum = String(dateObj.getDate());
+  const date = `${month} ${dayNum}, ${y}`;
   const id = 'custom-' + Date.now();
-  const newDay = {id, label, date, dest};
+  const newDay = {id, label, date, dayNum, iso, dest};
   if(note) newDay.label2 = note;
   DAYS.push(newDay);
   state.days = DAYS;
@@ -914,7 +933,7 @@ function renderExpenseTabs(){
   const el = document.getElementById('day-select');
   el.innerHTML = DAYS.map(d => {
     const t = sumBy(state.expenses[d.id], x => x.amt || 0);
-    return `<button data-day="${d.id}" class="${d.id===activeExpenseDay?'active':''}">${d.label} ${d.date.split(' ').pop()}${t>0 ? `<br><span style="font-size:10px;">${fmt(t)}</span>` : ''}</button>`;
+    return `<button data-day="${d.id}" class="${d.id===activeExpenseDay?'active':''}">${d.label} ${chipDayNum(d)}${t>0 ? `<br><span style="font-size:10px;">${fmt(t)}</span>` : ''}</button>`;
   }).join('');
   el.querySelectorAll('button').forEach(b => b.addEventListener('click', e => {
     activeExpenseDay = e.currentTarget.dataset.day;
