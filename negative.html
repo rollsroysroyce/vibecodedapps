@@ -35,8 +35,35 @@ button,input,select{font:inherit;color:inherit}
 button{cursor:pointer}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 
-#app{height:100%;display:grid;grid-template-columns:244px minmax(0,1fr) 316px;
-  grid-template-rows:46px minmax(0,1fr);grid-template-areas:"bar bar bar" "left stage right"}
+#app{height:100%;display:grid;grid-template-columns:244px 48px minmax(0,1fr) 316px;
+  grid-template-rows:46px minmax(0,1fr);grid-template-areas:"bar bar bar bar" "left rail stage right"}
+#toolrail{grid-area:rail;display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 0;border-right:1px solid var(--line);overflow-y:auto;scrollbar-width:none}
+#toolrail::-webkit-scrollbar{display:none}
+.rbtn{width:36px;height:34px;border-radius:7px;border:0;background:none;color:var(--muted);display:grid;place-items:center;flex:none;padding:0}
+.rbtn:hover{background:var(--surface2);color:var(--text)}
+.rbtn[aria-pressed="true"]{background:var(--surface2);color:var(--accent);box-shadow:inset 0 0 0 1px var(--line)}
+.rbtn:disabled{opacity:.35;cursor:default;background:none;color:var(--muted)}
+.rsep{width:24px;height:1px;background:var(--line);margin:5px 0;flex:none}
+.layers{padding:0 12px 12px}
+.lhead{display:flex;justify-content:space-between;align-items:baseline;margin:0 0 6px}
+.lhead h3{font-size:13px;font-weight:600;margin:0}
+#layerList{border:1px solid var(--line);border-radius:8px;padding:3px;max-height:min(212px,26vh);overflow-y:auto}
+.layer{display:flex;align-items:center;gap:6px;border-radius:6px;padding:2px 4px 2px 2px;min-height:40px}
+.layer:hover{background:var(--surface2)}
+.layer.sel{background:var(--surface2);box-shadow:inset 2px 0 0 var(--accent)}
+.layer.off .licon,.layer.off .lname{opacity:.42}
+.leye{width:26px;height:26px;border:0;background:none;color:var(--muted);display:grid;place-items:center;border-radius:5px;flex:none;padding:0}
+.leye:hover{color:var(--text)}
+.licon{width:28px;height:28px;border-radius:5px;background:var(--surface2);display:grid;place-items:center;color:var(--text);flex:none}
+.layer:hover .licon,.layer.sel .licon{background:var(--surface)}
+.lname{flex:1;min-width:0;text-align:left;background:none;border:0;padding:2px;display:flex;flex-direction:column;gap:1px}
+.lname b{font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lname small{color:var(--muted);font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.layer.muted .lname b{color:var(--muted);font-weight:400}
+.ldel{width:26px;height:26px;border:0;background:none;color:var(--muted);border-radius:5px;display:grid;place-items:center;opacity:0;padding:0;flex:none}
+.layer:hover .ldel,.ldel:focus-visible{opacity:1}
+.ldel:hover{color:var(--danger)}
+.lrename{flex:1;min-width:0;height:28px;border-radius:5px;border:1px solid var(--accent);background:var(--surface);padding:0 6px}
 .bar{grid-area:bar;display:flex;align-items:center;gap:14px;padding:0 12px;border-bottom:1px solid var(--line);min-width:0}
 .brand{font-weight:600;font-size:15px;letter-spacing:-0.01em;display:flex;align-items:center;gap:8px;white-space:nowrap}
 .brand svg{display:block}
@@ -55,7 +82,9 @@ button{cursor:pointer}
 
 aside{overflow-y:auto;overscroll-behavior:contain;min-height:0}
 #left{grid-area:left;border-right:1px solid var(--line);display:flex;flex-direction:column}
-#right{grid-area:right;border-left:1px solid var(--line)}
+#right{grid-area:right;border-left:1px solid var(--line);display:flex;flex-direction:column;overflow:hidden}
+#right>*{flex:none}
+#right>#panels{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;border-top:1px solid var(--line)}
 #stage{grid-area:stage;position:relative;background:var(--stage);min-width:0;min-height:0;overflow:hidden;touch-action:none}
 #gl,#overlay{position:absolute;inset:0;width:100%;height:100%;display:block}
 #overlay{pointer-events:none}
@@ -113,7 +142,7 @@ input[type=range]:focus-visible::-webkit-slider-thumb{box-shadow:0 0 0 3px var(-
 .row{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
 canvas.curve{width:100%;aspect-ratio:1;display:block;border-radius:6px;background:var(--surface2);touch-action:none;cursor:crosshair}
 canvas.wheel{width:150px;height:150px;display:block;margin:4px auto 8px;touch-action:none;cursor:crosshair}
-#hist{width:100%;height:84px;display:block;border-radius:6px;background:var(--surface2)}
+#hist{width:100%;height:70px;display:block;border-radius:6px;background:var(--surface2)}
 .histwrap{padding:12px 12px 10px}
 .histmeta{display:flex;justify-content:space-between;color:var(--muted);font-size:12px;margin-top:6px;gap:8px}
 
@@ -179,8 +208,10 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
 
 #mtabs{display:none}
 @media (max-width: 900px){
-  #app{grid-template-columns:minmax(0,1fr);grid-template-rows:48px 50vh auto minmax(0,1fr);
-    grid-template-areas:"bar" "stage" "tabs" "panel"}
+  #app{grid-template-columns:minmax(0,1fr);grid-template-rows:48px 50vh auto auto minmax(0,1fr);
+    grid-template-areas:"bar" "stage" "rail" "tabs" "panel"}
+  #toolrail{flex-direction:row;overflow-x:auto;border-right:0;border-bottom:1px solid var(--line);padding:4px 6px;justify-content:flex-start}
+  .rsep{width:1px;height:22px;margin:0 4px}
   .bar{flex-wrap:nowrap;padding:0 6px;gap:6px;height:48px}
   .brand-name,.fileinfo,.sep{display:none}
   .tools{flex:1;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;padding:0 2px}
@@ -191,6 +222,8 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
   #mtabs button{flex:1;height:38px;border:0;background:none;color:var(--muted);font-weight:500}
   #mtabs button[aria-pressed="true"]{color:var(--text);box-shadow:inset 0 -2px 0 var(--accent)}
   #left,#right{grid-area:panel;border:0}
+  #right{display:block;overflow-y:auto}
+  #right>#panels{overflow:visible}
   #app[data-tab="adjust"] #left{display:none}
   #app[data-tab="presets"] #right{display:none}
   .hide-sm{display:none}
@@ -212,15 +245,13 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
       <button class="btn" id="btnRedo" title="Redo (Ctrl+Shift+Z)" disabled>Redo</button>
       <span class="sep hide-sm"></span>
       <button class="btn" id="btnBefore" aria-pressed="false" title="Show the original (\)" disabled>Before</button>
-      <button class="btn" id="btnCrop" aria-pressed="false" title="Crop and straighten (C)" disabled>Crop</button>
-      <button class="btn" id="btnMasks" aria-pressed="false" title="Lights and masks (M)" disabled>Light</button>
-      <button class="btn" id="btnHeal" aria-pressed="false" title="Spot healing (H)" disabled>Heal</button>
-      <button class="btn" id="btnZoom" aria-pressed="false" title="Toggle fit and 100% (Z)" disabled>100%</button>
       <button class="btn hide-sm" id="btnClip" aria-pressed="false" title="Show clipped highlights and shadows (J)" disabled>Clipping</button>
       <button class="btn hide-sm" id="btnReset" title="Reset all adjustments" disabled>Reset</button>
       <button class="btn primary" id="btnExport" title="Export (Ctrl+E)" disabled>Export</button>
     </div>
   </header>
+
+  <nav id="toolrail" aria-label="Tools"><button id="btnZoom" class="rbtn"></button><button id="btnCrop" class="rbtn"></button><button id="btnMasks" class="rbtn"></button><button id="btnHeal" class="rbtn"></button></nav>
 
   <aside id="left" aria-label="Looks and presets">
     <div class="ltabs"><div class="seg" id="leftTabs"><button data-v="looks" aria-pressed="true">Looks</button><button data-v="presets" aria-pressed="false">My presets</button></div></div>
@@ -269,9 +300,10 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
 
   <aside id="right" aria-label="Adjustments">
     <div class="histwrap">
-      <canvas id="hist" width="580" height="168" aria-label="Histogram"></canvas>
+      <canvas id="hist" width="580" height="140" aria-label="Histogram"></canvas>
       <div class="histmeta"><span id="histL"></span><span id="histR"></span></div>
     </div>
+    <div class="layers"><div class="lhead"><h3>Layers</h3><span class="muted" style="font-size:12px">Click to edit, eye to hide</span></div><div id="layerList"></div></div>
     <div style="padding:0 12px 8px"><div class="seg" id="segTreatment"><button data-v="color" aria-pressed="true">Colour</button><button data-v="bw" aria-pressed="false">Black and white</button></div></div>
     <div id="panels"></div>
   </aside>
@@ -386,7 +418,7 @@ function defaultParams(img) {
     sharp: raw ? 40 : 0, sharpRadius:1, sharpDetail:25, sharpMask:0, lnr:0, cnr: raw ? 25 : 0,
     diffuse:0, halation:0, bars:'0', bgAmt:0, bgKeep:-1, lutId:null, lutAmt:100,
     vigAmt:0, vigMid:50, vigRound:0, vigFeather:50, grainAmt:0, grainSize:25, grainRough:50,
-    crop:{x:0,y:0,w:1,h:1}, angle:0, orient:0, flipH:false, aspect:'original', look:null, masks:[], heal:[]
+    crop:{x:0,y:0,w:1,h:1}, angle:0, orient:0, flipH:false, aspect:'original', look:null, masks:[], heal:[], off:{}
   };
 }
 const getPath = (o, p) => p.split('.').reduce((a, k) => a == null ? a : a[k], o);
@@ -887,6 +919,7 @@ function ensureFull(cb) {
 }
 function render() {
   if (!glOK) return;
+  syncTools();
   const dpr = resizeCanvas();
   const bg = stageColor();
   gl.bindFramebuffer(gl.FRAMEBUFFER, null);
@@ -894,7 +927,7 @@ function render() {
   gl.clearColor(bg[0], bg[1], bg[2], 1); gl.clear(gl.COLOR_BUFFER_BIT);
   drawOverlay(); // clears overlay
   if (!IMG || !levels.proxy) return;
-  let p = previewParams || params;
+  let p = effP(previewParams || params);
   if (view.before) { const d = defaultParams(IMG); for (const k of GEOM_KEYS) d[k] = clone(params[k]); p = d; }
   if (view.crop) p = Object.assign({}, p);
   const crop = view.crop ? { x:0, y:0, w:1, h:1 } : p.crop;
@@ -930,7 +963,7 @@ function render() {
 let histTex = null;
 function updateHistogram() {
   if (!IMG || !levels.proxy) return;
-  const p = view.before ? (() => { const d = defaultParams(IMG); for (const k of GEOM_KEYS) d[k] = clone(params[k]); return d; })() : (previewParams || params);
+  const p = view.before ? (() => { const d = defaultParams(IMG); for (const k of GEOM_KEYS) d[k] = clone(params[k]); return d; })() : effP(previewParams || params);
   const [Wf, Hf] = oriDims(p, SRC.w, SRC.h); const ar = (p.crop.w*Wf)/(p.crop.h*Hf);
   const w = ar >= 1 ? 256 : Math.max(16, Math.round(256*ar)), h = ar >= 1 ? Math.max(16, Math.round(256/ar)) : 256;
   if (!histTex || histTex.w !== w || histTex.h !== h) { delTex(histTex); histTex = newTex(w, h, 'RGBA8', false); }
@@ -1081,7 +1114,7 @@ $('#stage').addEventListener('pointerup', e => {
 function setZoom(on) {
   if (!IMG && on) return;
   view.mode = on ? 'zoom' : 'fit';
-  $('#btnZoom').setAttribute('aria-pressed', on); $('#btnZoom').textContent = on ? 'Fit' : '100%';
+  $('#btnZoom').setAttribute('aria-pressed', on);
   $('#stage').classList.toggle('zoomed', on);
   if (on && !levels.full) busy(true, 'Preparing full resolution');
   ensureFull(() => busy(false));
@@ -1094,7 +1127,7 @@ function commit() {
   const s = snapshot();
   if (history[hIndex] === s) return;
   history = history.slice(0, hIndex + 1); history.push(s); if (history.length > 200) history.shift(); hIndex = history.length - 1;
-  updateHistoryButtons(); saveEditSoon();
+  updateHistoryButtons(); saveEditSoon(); renderLayers();
 }
 function updateHistoryButtons() { $('#btnUndo').disabled = hIndex <= 0; $('#btnRedo').disabled = hIndex >= history.length - 1; }
 function restore(i) {
@@ -1392,7 +1425,7 @@ function drawWheel() {
 
 function syncAll() { for (const c of controls) c.sync(); }
 function refreshUI() {
-  syncAll(); renderLutBox(); renderBgKeep(); barsSeg && barsSeg.sync(); drawCurve(); drawWheel(); renderMixer();
+  renderLayers(); syncTools(); syncAll(); renderLutBox(); renderBgKeep(); barsSeg && barsSeg.sync(); drawCurve(); drawWheel(); renderMixer();
   aspectSeg && aspectSeg.sync();
   document.querySelectorAll('#segTreatment button').forEach(b => b.setAttribute('aria-pressed', String((b.dataset.v === 'bw') === !!params.bw)));
   $('#wbState').textContent = params.wbAsShot ? 'Using as shot' : '';
@@ -1615,7 +1648,7 @@ $('#presetIn').addEventListener('change', e => { const f = [...e.target.files]; 
 $('#btnSavePreset').onclick = () => { const f = $('#saveForm'); f.classList.toggle('on'); if (f.classList.contains('on')) $('#saveName').focus(); };
 const doSave = () => {
   const name = $('#saveName').value.trim(); if (!name) { $('#saveName').focus(); return; }
-  const pp = clone(params); for (const k of GEOM_KEYS) delete pp[k]; delete pp.look; delete pp.masks; delete pp.heal;
+  const pp = clone(params); for (const k of GEOM_KEYS) delete pp[k]; delete pp.look; delete pp.masks; delete pp.heal; delete pp.off;
   if (pp.wbAsShot) { delete pp.temp; delete pp.tint; }
   presets.push({ id: Date.now().toString(36), name, group: 'My presets', params: pp, skipped: [] });
   presets.sort((a, b) => (a.group || '').localeCompare(b.group || '') || a.name.localeCompare(b.name));
@@ -1674,7 +1707,8 @@ async function openPhoto(file) {
     $('#fname').textContent = file.name; $('#fname').classList.remove('muted');
     const m = IMG.meta;
     $('#exif').innerHTML = m ? [m.model, m.iso ? `ISO ${m.iso}` : '', fmtShutter(m.shutter), m.ap ? `f/${+m.ap.toFixed(1)}` : '', m.focal ? `${Math.round(m.focal)} mm` : ''].filter(Boolean).map(s => `<span>${escapeHtml(s)}</span>`).join('') : `<span>${res.w} × ${res.h}</span>`;
-    for (const id of ['btnBefore','btnCrop','btnMasks','btnHeal','btnZoom','btnClip','btnReset','btnExport','btnSavePreset']) $('#' + id).disabled = false;
+    for (const id of ['btnBefore','btnClip','btnReset','btnExport','btnSavePreset']) $('#' + id).disabled = false;
+    document.querySelectorAll('.rbtn').forEach(b => b.disabled = false);
     refreshUI(); setZoom(false); setCrop(false);
     busy(false);
     requestRender();
@@ -1752,6 +1786,9 @@ document.addEventListener('keydown', e => {
   else if (view.masks && e.key.toLowerCase() === 'o') { showSel = !showSel; renderMaskControls(); requestRender(); }
   else if (e.key === 'Escape' && view.masks) setMasks(false);
   else if (e.key.toLowerCase() === 'j') $('#btnClip').click();
+  else if (e.key.toLowerCase() === 'v') setTool('hand');
+  else if (e.key.toLowerCase() === 'i') setTool('wb');
+  else if ({ b:'brush', w:'colour', s:'sky', r:'radial', g:'grad', l:'light', d:'dark' }[e.key.toLowerCase()]) setTool({ b:'brush', w:'colour', s:'sky', r:'radial', g:'grad', l:'light', d:'dark' }[e.key.toLowerCase()]);
   else if (e.key === 'Escape' && view.crop) setCrop(false);
   else if (e.key === 'Enter' && view.crop) setCrop(false);
 });
@@ -1802,7 +1839,7 @@ async function saveFile(name, blob) {
   return 'saved';
 }
 async function exportImage(fmt, quality, longEdge, progress) {
-  const p = params;
+  const p = effP(params);
   const [Wf, Hf] = oriDims(p, SRC.w, SRC.h);
   const fullW = p.crop.w*Wf, fullH = p.crop.h*Hf;
   let s = 1; if (longEdge && Math.max(fullW, fullH) > longEdge) s = longEdge/Math.max(fullW, fullH);
@@ -1922,6 +1959,7 @@ function maskUniforms(p) {
     C.set([m.exp, m.sat/100, ((m.hue % 360) + 360) % 360/360, m.camt/100], i*4);
     D.set([m.con/100, m.hi/100, m.sh/100, m.cla/100], i*4);
     E.set([m.temp/100, m.tnt/100, ty === 2 ? (ch[i] ?? -1) : 0, 0], i*4);
+    if (m.hidden) { C.set([0, 0, 0, 0], i*4); D.set([0, 0, 0, 0], i*4); E[i*4] = 0; E[i*4+1] = 0; }
     if (ty === 3) F.set(m.ref ? [m.ref[0], m.ref[1], m.ref[2], m.tol/100*0.5] : [0, 0, 0, -1], i*4);
     if (ty === 4) F.set([m.rlo/100, m.rhi/100, m.rsoft/100, 0], i*4);
     if (ty === 5) { const sk = IMG && IMG.sky; F.set(sk && sk.found ? [sk.ref[0], sk.ref[1], sk.ref[2], m.tol/100*0.6] : [0, 0, 0, -1], i*4); E[i*4+3] = sk && sk.found ? sk.refL : 0; }
@@ -2542,6 +2580,181 @@ function renderLutBox() {
 }
 $('#lutIn').addEventListener('change', e => { const f = [...e.target.files]; e.target.value = ''; if (f.length) importLuts(f); });
 
+
+/* ================= layers ================= */
+const BASE_KEYS = ['temp','tint','wbAsShot','exposure','contrast','highlights','shadows','whites','blacks','texture','clarity','dehaze','vibrance','saturation',
+  'pShadows','pDarks','pLights','pHighlights','pSplit1','pSplit2','pSplit3','curve','hue','hsat','hlum','bw','gray','cg','cgBlend','cgBal',
+  'sharp','sharpRadius','sharpDetail','sharpMask','lnr','cnr'];
+const FX_KEYS = [['vigAmt','Vignette'],['grainAmt','Grain'],['diffuse','Diffusion'],['halation','Halation'],['bgAmt','Background blur'],['lutId','LUT'],['bars','Letterbox']];
+const fxOn = (p, k) => k === 'lutId' ? !!(p.lutId && luts[p.lutId]) : k === 'bars' ? +(p.bars || 0) > 0 : k === 'bgAmt' ? p.bgAmt > 0 && !!(p.masks || [])[p.bgKeep] : (p[k] || 0) !== 0;
+/* the params actually rendered: hidden layers switched off */
+function effP(p) {
+  const off = p.off || {};
+  if (!off.base && !off.look && !off.heal && !off.fx) return p;
+  let q = clone(p);
+  if (off.base) {
+    const d = defaultParams(IMG); for (const k of BASE_KEYS) q[k] = clone(d[k]);
+    q.look = null;
+    if (!off.look && p.look && p.look.id) q = shiftLook(q, NO_LOOK, { id: p.look.id, s: p.look.s, auto: false });
+  } else if (off.look && p.look && p.look.id) q = shiftLook(q, p.look, { id: null, s: 0, auto: p.look.auto });
+  if (off.heal) q.heal = [];
+  if (off.fx) Object.assign(q, { diffuse:0, halation:0, bgAmt:0, lutId:null, vigAmt:0, grainAmt:0, bars:'0' });
+  return q;
+}
+function baseEdits(p) {
+  let q = p.look && p.look.id ? shiftLook(clone(p), p.look, { id: null, s: 0, auto: p.look.auto }) : p;
+  const d = defaultParams(IMG); let n = 0;
+  for (const k of BASE_KEYS) { if (k === 'wbAsShot' || k === 'pSplit1' || k === 'pSplit2' || k === 'pSplit3') continue; if (JSON.stringify(q[k]) !== JSON.stringify(d[k])) n++; }
+  return n;
+}
+const ICON = {
+  eye: '<path d="M2 12s3.5-6.5 10-6.5S22 12 22 12s-3.5 6.5-10 6.5S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
+  eyeOff: '<path d="M3 3l18 18"/><path d="M10.6 5.6A10 10 0 0 1 12 5.5C18.5 5.5 22 12 22 12a17 17 0 0 1-3.2 4"/><path d="M6.2 7.2A17 17 0 0 0 2 12s3.5 6.5 10 6.5a9.6 9.6 0 0 0 4.3-1"/>',
+  photo: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 16l5-5 4 4 3-3 6 6"/>',
+  sliders: '<path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/>',
+  look: '<rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="8" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/><rect x="13" y="13" width="8" height="8" rx="1.5"/>',
+  fx: '<path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 16v4M17 18h4"/>',
+  hand: '<path d="M8 13V5.5a1.5 1.5 0 0 1 3 0V11m0-6.5a1.5 1.5 0 0 1 3 0V11m0-5a1.5 1.5 0 0 1 3 0V12m-9-1.5a1.5 1.5 0 0 0-3 0V14a7 7 0 0 0 7 7h1a6 6 0 0 0 6-6V8.5a1.5 1.5 0 0 0-3 0"/>',
+  zoom: '<circle cx="10.5" cy="10.5" r="6"/><path d="M15 15l5.5 5.5M8 10.5h5M10.5 8v5"/>',
+  crop: '<path d="M6 2v16h16M2 6h16v16"/>',
+  select: '<rect x="3" y="3" width="13" height="13" stroke-dasharray="2.6 2.2"/><path d="M13 13l8 3-3.4 1.3L16.3 21z"/>',
+  brush: '<path d="M18.5 3.5l2 2-8.5 8.5-2-2z"/><path d="M10 12c-3 0-4.5 1.7-4.5 4 0 1.6-1 2.6-2.5 3 3.4 1.6 8.5.6 8.5-4"/>',
+  colour: '<path d="M4 20L14.5 9.5"/><path d="M16.5 2.5v4M14.5 4.5h4M20.5 9v3M19 10.5h3M12 4l1 1"/>',
+  sky: '<path d="M7 18.5h10.5a4 4 0 0 0 .3-8 5.5 5.5 0 0 0-10.6-1.4A4.7 4.7 0 0 0 7 18.5z"/>',
+  radial: '<ellipse cx="12" cy="12" rx="9" ry="7"/><ellipse cx="12" cy="12" rx="4" ry="3" stroke-dasharray="2 2"/>',
+  gradient: '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18" stroke-dasharray="2 2"/><path d="M3 15h18"/>',
+  bright: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8"/>',
+  light: '<path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-4 10.5c.8.8 1 1.6 1 2.5h6c0-.9.2-1.7 1-2.5A6 6 0 0 0 12 3z"/>',
+  dark: '<path fill-rule="evenodd" fill="currentColor" fill-opacity=".35" d="M3 4h18v16H3z M12 7.5a3.5 4.5 0 1 0 0 9a3.5 4.5 0 1 0 0-9z"/><rect x="3" y="4" width="18" height="16" rx="1.5"/>',
+  heal: '<path d="M4.6 14.6l10-10a3.5 3.5 0 0 1 5 5l-10 10a3.5 3.5 0 0 1-5-5z"/><path d="M10.5 10.5h.01M13.5 13.5h.01M13.5 10.5h.01M10.5 13.5h.01"/>',
+  wb: '<path d="M16 3.5l4.5 4.5-2.5 1-7 7H8.5v-2.5l7-7z"/><path d="M3.5 20.5l5-5"/>',
+  trash: '<path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/>'
+};
+const svg = (k, s = 18) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON[k]}</svg>`;
+const MASK_ICON = { brush:'brush', colour:'colour', sky:'sky', radial:'radial', linear:'gradient', lum:'bright' };
+function renderLayers() {
+  const box = $('#layerList'); if (!box) return;
+  box.innerHTML = '';
+  if (!IMG) { box.innerHTML = '<div class="pempty" style="padding:4px 2px">Open a photo to see its layers.</div>'; return; }
+  const p = params, off = p.off || {};
+  const rows = [];
+  const fx = FX_KEYS.filter(([k]) => fxOn(p, k)).map(([, n]) => n);
+  if (fx.length) rows.push({ key:'fx', icon:'fx', name:'Effects', meta: fx.join(', '), hidden: !!off.fx });
+  for (let i = (p.masks || []).length - 1; i >= 0; i--) { const m = p.masks[i];
+    const adj = ['exp','con','hi','sh','cla','temp','tnt','sat','camt'].filter(k => m[k]).length;
+    rows.push({ key:'m' + i, mi: i, icon: m.kind === 'light' ? 'light' : m.kind === 'dark' ? 'dark' : MASK_ICON[m.type] || 'select', name: m.name, meta: adj ? `${adj} adjustment${adj === 1 ? '' : 's'}${m.inv ? ', inverted' : ''}` : 'No adjustments yet', hidden: !!m.hidden, del: true, sel: view.masks && i === selMask }); }
+  if (p.look && p.look.id) { const L = LOOKS.find(x => x.id === p.look.id); rows.push({ key:'look', icon:'look', name:`Look: ${L ? L.name : ''}`, meta: `${Math.round(p.look.s*100)}%${p.look.auto ? ', auto-balanced' : ''}`, hidden: !!off.look }); }
+  const be = baseEdits(p);
+  rows.push({ key:'base', icon:'sliders', name:'Adjustments', meta: be ? `Edited: ${be} setting${be === 1 ? '' : 's'}` : 'No changes', hidden: !!off.base, muted: !be });
+  if ((p.heal || []).length) rows.push({ key:'heal', icon:'heal', name:'Healing', meta: `${p.heal.length} spot${p.heal.length === 1 ? '' : 's'}`, hidden: !!off.heal, sel: view.heal });
+  rows.push({ key:'photo', icon:'photo', name: IMG.name, meta: 'Original photo, locked', locked: true });
+  for (const r of rows) {
+    const el = document.createElement('div'); el.className = 'layer' + (r.sel ? ' sel' : '') + (r.hidden ? ' off' : '') + (r.muted ? ' muted' : '');
+    el.innerHTML = `${r.locked ? '<span class="leye"></span>' : `<button class="leye" title="${r.hidden ? 'Show' : 'Hide'} layer" aria-label="${r.hidden ? 'Show' : 'Hide'} ${escapeHtml(r.name)}">${svg(r.hidden ? 'eyeOff' : 'eye', 16)}</button>`}
+      <span class="licon">${svg(r.icon, 16)}</span><button class="lname"><b></b><small></small></button>${r.del ? `<button class="ldel" title="Delete layer" aria-label="Delete ${escapeHtml(r.name)}">${svg('trash', 15)}</button>` : ''}`;
+    el.querySelector('b').textContent = r.name; el.querySelector('small').textContent = r.meta;
+    const eye = el.querySelector('button.leye');
+    if (eye) eye.onclick = () => {
+      if (r.mi !== undefined) params.masks[r.mi].hidden = !params.masks[r.mi].hidden;
+      else { params.off = Object.assign({}, params.off); params.off[r.key] = !params.off[r.key]; }
+      requestRender(); commit(); renderLayers();
+    };
+    el.querySelector('.lname').onclick = () => openLayer(r);
+    if (r.mi !== undefined) el.querySelector('.lname').ondblclick = () => renameLayer(el, r.mi);
+    const del = el.querySelector('.ldel'); if (del) del.onclick = () => { deleteMask(r.mi); renderLayers(); };
+    box.appendChild(el);
+  }
+}
+function openSection(id) { const s = $('#sec_' + id); if (!s) return; s.open = true; if (window.innerWidth <= 900) $('#tabAdjust').click(); setTimeout(() => s.scrollIntoView({ block: 'start', behavior: 'smooth' }), 30); }
+function openLayer(r) {
+  if (r.key === 'photo') return;
+  if (r.mi !== undefined) { selMask = r.mi; setMasks(true); renderMaskControls(); openSection('masks'); requestRender(); renderLayers(); return; }
+  setTool('hand');
+  if (r.key === 'base') openSection('light');
+  else if (r.key === 'heal') { setHeal(true); renderHealControls(); openSection('heal'); }
+  else if (r.key === 'fx') openSection('effects');
+  else if (r.key === 'look') { if (window.innerWidth <= 900) $('#tabPresets').click(); document.querySelector('#leftTabs button[data-v="looks"]').click(); }
+  renderLayers();
+}
+function renameLayer(el, i) {
+  const nb = el.querySelector('.lname'); const inp = document.createElement('input'); inp.className = 'lrename'; inp.value = params.masks[i].name; inp.maxLength = 40;
+  nb.replaceWith(inp); inp.focus(); inp.select();
+  const done = ok => { if (ok && inp.value.trim()) { params.masks[i].name = inp.value.trim(); commit(); renderMaskControls(); } renderLayers(); };
+  inp.onkeydown = e => { if (e.key === 'Enter') done(true); if (e.key === 'Escape') done(false); };
+  inp.onblur = () => done(true);
+}
+
+/* ================= tool rail ================= */
+const TOOLS = [
+  { id:'hand', icon:'hand', label:'Hand: pan when zoomed', key:'V' },
+  { id:'zoom', icon:'zoom', label:'Zoom: fit or 100%', key:'Z', btn:'btnZoom' },
+  { id:'crop', icon:'crop', label:'Crop and straighten', key:'C', btn:'btnCrop' },
+  { sep:true },
+  { id:'select', icon:'select', label:'Edit selections: move and adjust them', key:'M', btn:'btnMasks' },
+  { id:'brush', icon:'brush', label:'Brush selection', key:'B', kind:'brush' },
+  { id:'colour', icon:'colour', label:'Colour range selection', key:'W', kind:'colour' },
+  { id:'sky', icon:'sky', label:'Select sky', key:'S', kind:'sky' },
+  { id:'radial', icon:'radial', label:'Radial selection', key:'R', kind:'radial' },
+  { id:'grad', icon:'gradient', label:'Gradient selection', key:'G', kind:'grad' },
+  { id:'bright', icon:'bright', label:'Brightness range selection', kind:'bright' },
+  { sep:true },
+  { id:'light', icon:'light', label:'Add light', key:'L', kind:'light' },
+  { id:'dark', icon:'dark', label:'Darken background', key:'D', kind:'dark' },
+  { sep:true },
+  { id:'heal', icon:'heal', label:'Spot healing', key:'H', btn:'btnHeal' },
+  { id:'wb', icon:'wb', label:'White balance picker: click something neutral', key:'I' }
+];
+function buildRail() {
+  const rail = $('#toolrail'); rail.innerHTML = '';
+  for (const t of TOOLS) {
+    if (t.sep) { const s = document.createElement('span'); s.className = 'rsep'; rail.appendChild(s); continue; }
+    const b = document.createElement('button'); b.className = 'rbtn'; b.disabled = true; if (t.btn) b.id = t.btn; b.dataset.tool = t.id;
+    b.setAttribute('aria-pressed', 'false'); b.title = t.label + (t.key ? ` (${t.key})` : ''); b.setAttribute('aria-label', t.label);
+    b.innerHTML = svg(t.icon, 20);
+    b.addEventListener('click', () => setTool(t.id));
+    rail.appendChild(b);
+  }
+}
+function setTool(id) {
+  if (!IMG) return;
+  const t = TOOLS.find(x => x.id === id); if (!t) return;
+  if (id !== 'wb') view.wbPick = false;
+  if (id === 'hand') { setCrop(false); setMasks(false); setHeal(false); }
+  else if (id === 'zoom') setZoom(view.mode !== 'zoom');
+  else if (id === 'crop') setCrop(!view.crop);
+  else if (id === 'select') { setMasks(true); openSection('masks'); if (!params.masks.length) toast('No selections yet. Pick a selection tool below the arrow to make one.'); }
+  else if (t.kind) { addMask(t.kind); openSection('masks'); }
+  else if (id === 'heal') { setHeal(!view.heal); renderHealControls(); }
+  else if (id === 'wb') { const on = !view.wbPick; setCrop(false); setMasks(false); setHeal(false); view.wbPick = on; $('#stage').classList.toggle('masking', on); if (on) toast('Click something that should be white or neutral grey.'); }
+  syncTools(); renderLayers(); requestRender();
+}
+function syncTools() {
+  const cur = params.masks && params.masks[selMask];
+  const active = view.crop ? 'crop' : view.heal ? 'heal' : view.wbPick ? 'wb' : view.masks ? 'select' : 'hand';
+  document.querySelectorAll('.rbtn').forEach(b => {
+    const id = b.dataset.tool; let on = id === active;
+    if (id === 'zoom') on = view.mode === 'zoom';
+    if (view.masks && cur) { const k = TOOLS.find(x => x.id === id); if (k && k.kind && k.kind === cur.kind) on = true; }
+    b.setAttribute('aria-pressed', String(on));
+  });
+}
+/* white balance picker */
+ovEl.addEventListener('pointerdown', e => {
+  if (!view.wbPick || !IMG) return;
+  const M = mapInfo(); if (!M) return;
+  const b = ovEl.getBoundingClientRect(); const [nx, ny] = screenToSrcNorm(e.clientX - b.left, e.clientY - b.top, M);
+  const sx = nx*SRC.w, sy = ny*SRC.h; if (sx < 0 || sy < 0 || sx >= SRC.w || sy >= SRC.h) return;
+  const reg = readRegion(sx, sy, 8); const avg = meanOf(ringSamples(reg, sx, sy, 5, 0, 1, 24));
+  if (!avg || Math.max(...avg) > 0.98 || avg[0] + avg[1] + avg[2] < 1e-4) { toast('That spot is too dark or too bright to read. Try a mid-grey or off-white area.'); return; }
+  let best = null, bd = 1e9;
+  for (let T = 2000; T <= 15000; T *= 1.008) for (let tn = -100; tn <= 100; tn += 2) {
+    const Mx = wbMatrix(IMG.asShotT, IMG.asShotTint, T, tn); const o = mvec(Mx, avg); const s = (o[0] + o[1] + o[2])/3;
+    const d = Math.hypot(o[0]/s - 1, o[1]/s - 1, o[2]/s - 1); if (d < bd) { bd = d; best = [T, tn]; }
+  }
+  params.temp = ROUND_T(best[0]); params.tint = best[1]; params.wbAsShot = false;
+  refreshUI(); requestRender(); commit(); toast(`White balance set to ${params.temp} K, tint ${params.tint > 0 ? '+' : ''}${params.tint}.`);
+});
+
 /* ================= looks ================= */
 const Z = (h, s, l = 0) => ({ h, s, l });
 const LOOKS = [
@@ -2728,14 +2941,14 @@ $('#leftTabs').addEventListener('click', e => {
 buildLookGrid();
 
 /* ================= boot ================= */
-buildPanels(); refreshUI(); renderPresets();
+buildRail(); buildPanels(); refreshUI(); renderPresets();
 if (!glOK) {
   $('#empty').querySelector('h1').textContent = 'This browser can\'t run the editor';
   $('#empty').querySelector('p').textContent = 'Negative needs WebGL 2 with floating-point rendering. Recent versions of Chrome, Edge, Firefox and Safari support it. If you are on one of those, check that hardware acceleration is turned on.';
   $('#btnOpen2').style.display = 'none';
 } else requestRender();
 canvas.addEventListener('webglcontextlost', e => { e.preventDefault(); toast('The graphics context was lost. Reload the page and reopen your photo; your edit is saved.', 9000); });
-window.__neg = { openPhoto, importPresets, get params() { return params; }, set params(v) { params = v; refreshUI(); requestRender(); }, exportImage, render, applyPreset, get presets() { return presets; }, view, setCrop, setZoom, refitCrop, commit, selectLook, addMask, setMasks, setHeal, addHealAt, LOOKS, get img() { return IMG; } };
+window.__neg = { openPhoto, importPresets, get params() { return params; }, set params(v) { params = v; refreshUI(); requestRender(); }, exportImage, render, applyPreset, get presets() { return presets; }, view, setCrop, setZoom, refitCrop, commit, selectLook, addMask, setMasks, setHeal, addHealAt, setTool, renderLayers, LOOKS, get img() { return IMG; } };
 })();
 </script>
 </body>
