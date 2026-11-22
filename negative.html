@@ -179,12 +179,14 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
 
 #mtabs{display:none}
 @media (max-width: 900px){
-  #app{grid-template-columns:minmax(0,1fr);grid-template-rows:auto 48vh auto minmax(0,1fr);
+  #app{grid-template-columns:minmax(0,1fr);grid-template-rows:48px 50vh auto minmax(0,1fr);
     grid-template-areas:"bar" "stage" "tabs" "panel"}
-  .bar{flex-wrap:wrap;padding:6px 8px;gap:6px}
-  .fileinfo{order:3;flex-basis:100%}
-  #exif{display:none}
-  .tools{flex-wrap:wrap}
+  .bar{flex-wrap:nowrap;padding:0 6px;gap:6px;height:48px}
+  .brand-name,.fileinfo,.sep{display:none}
+  .tools{flex:1;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;padding:0 2px}
+  .tools::-webkit-scrollbar{display:none}
+  .tools .btn{height:34px;flex:none}
+  .tools .btn.primary{margin-left:auto;position:sticky;right:0;box-shadow:-10px 0 10px var(--surface)}
   #mtabs{grid-area:tabs;display:flex;border-bottom:1px solid var(--line)}
   #mtabs button{flex:1;height:38px;border:0;background:none;color:var(--muted);font-weight:500}
   #mtabs button[aria-pressed="true"]{color:var(--text);box-shadow:inset 0 -2px 0 var(--accent)}
@@ -200,7 +202,7 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
   <header class="bar">
     <div class="brand">
       <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><rect x="1.5" y="3" width="15" height="12" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.5"/><rect x="4.5" y="6" width="9" height="6" fill="currentColor" opacity=".85"/><path d="M1.5 6h1.5M1.5 9h1.5M1.5 12h1.5M15 6h1.5M15 9h1.5M15 12h1.5" stroke="currentColor" stroke-width="1"/></svg>
-      Negative
+      <span class="brand-name">Negative</span>
     </div>
     <div class="fileinfo"><span id="fname" class="muted">No photo open</span><span id="exif"></span></div>
     <div class="tools">
@@ -220,7 +222,7 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
     </div>
   </header>
 
-  <aside id="left" aria-label="Looks and presets" style="display:flex;flex-direction:column">
+  <aside id="left" aria-label="Looks and presets">
     <div class="ltabs"><div class="seg" id="leftTabs"><button data-v="looks" aria-pressed="true">Looks</button><button data-v="presets" aria-pressed="false">My presets</button></div></div>
     <div class="pane on" id="looksPane">
       <div class="lookcard" id="lookCard">
@@ -291,7 +293,7 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
   </form>
 </dialog>
 
-<input type="file" id="fileIn" hidden accept=".arw,.srf,.sr2,.cr2,.cr3,.crw,.nef,.nrw,.raf,.orf,.rw2,.dng,.pef,.srw,.3fr,.iiq,.erf,.kdc,.mos,.mrw,.x3f,.raw,.rwl,.jpg,.jpeg,.png,.webp,.avif">
+<input type="file" id="fileIn" hidden accept="image/*,.arw,.srf,.sr2,.cr2,.cr3,.crw,.nef,.nrw,.raf,.orf,.rw2,.dng,.pef,.srw,.3fr,.iiq,.erf,.kdc,.mos,.mrw,.x3f,.raw,.rwl,.jpg,.jpeg,.png,.webp,.avif">
 <input type="file" id="presetIn" hidden multiple accept=".xmp,.dng">
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
@@ -482,7 +484,7 @@ uniform float uVib, uSat; uniform float uHue[8], uHSat[8], uHLum[8], uGray[8]; u
 uniform vec3 uCgS, uCgM, uCgH, uCgG; uniform vec4 uCgL; uniform float uCgBlend, uCgBal; uniform bool uCgOn;
 uniform float uVigAmt, uVigMid, uVigRound, uVigFeather, uGrainAmt, uGrainSize, uGrainRough;
 uniform bool uClip; uniform float uDither;
-uniform int uMkN; uniform vec4 uMkA[8], uMkB[8], uMkC[8];
+uniform int uMkN; uniform vec4 uMkA[8], uMkB[8], uMkC[8], uMkD[8], uMkE[8], uMkF[8]; uniform sampler2D uMaskTex; uniform int uShowMask; uniform float uLumGain;
 uniform int uHeN; uniform vec4 uHeA[24], uHeB[24], uHeC[24];
 out vec4 o;
 const vec3 LW=vec3(0.2126,0.7152,0.0722);
@@ -542,19 +544,28 @@ void main(){
   float Lr=log2(max(lum(x),1e-7));
   float dS=clamp(Lr-log2(bS),-1.,1.), d2=clamp(Lr-log2(b2),-2.,2.), dM=clamp(Lr-log2(bM),-3.,3.);
   /* white balance and exposure */
+  vec3 xr0=x;
   x=max(uM*x,0.);
-  /* local lights and masks */
-  if(uMkN>0){ float lg=max(uOriSize.x,uOriSize.y); vec3 gain=vec3(1.); float satm=1.;
+  /* masks and selections */
+  float lCon=0., lHi=0., lSh=0., lCla=0., showW=0.;
+  if(uMkN>0){ float lg=max(uOriSize.x,uOriSize.y); vec3 gain=vec3(1.); float satm=1.; vec4 mt=texture(uMaskTex,su);
+    float sY=xr0.r+xr0.g+xr0.b; vec3 cr=xr0/max(sY,1e-6); float vY=oetf1(clamp(lum(xr0)*uLumGain,0.,1.));
     for(int i=0;i<8;i++){ if(i>=uMkN) break;
-      vec4 A=uMkA[i], B=uMkB[i], Cc=uMkC[i];
-      vec2 q=P-A.xy*uOriSize; float cb=cos(B.x), sb=sin(B.x); q=vec2(cb*q.x+sb*q.y, -sb*q.x+cb*q.y);
-      float w;
-      if(B.w<0.5){ float e=length(q/(max(A.zw,vec2(1e-4))*lg)); float f=max(B.y,0.02); w=1.-smoothstep(1.-f,1.,e); }
-      else { float tt=q.y/(max(A.z,1e-4)*lg); w=1.-smoothstep(-1.,1.,tt); }
+      vec4 A=uMkA[i], B=uMkB[i], Cc=uMkC[i], D=uMkD[i], E=uMkE[i], F=uMkF[i];
+      int ty=int(B.w+0.5); float w=0.;
+      if(ty<=1){ vec2 q=P-A.xy*uOriSize; float cb=cos(B.x), sb=sin(B.x); q=vec2(cb*q.x+sb*q.y, -sb*q.x+cb*q.y);
+        if(ty==0){ float ee=length(q/(max(A.zw,vec2(1e-4))*lg)); w=1.-smoothstep(1.-max(B.y,0.02),1.,ee); }
+        else { float tt=q.y/(max(A.z,1e-4)*lg); w=1.-smoothstep(-1.,1.,tt); } }
+      else if(ty==2){ int ch=int(E.z+0.5); w = E.z<0. ? 0. : ch==0 ? mt.r : ch==1 ? mt.g : ch==2 ? mt.b : mt.a; }
+      else if(ty==3){ if(F.w>=0.){ float dist=length(cr-F.xyz)*3.; w=(1.-smoothstep(F.w,F.w*1.8+0.02,dist))*smoothstep(0.0004,0.003,sY); } }
+      else { float fz=max(F.z,0.01); w=smoothstep(F.x-fz,F.x,vY)*(1.-smoothstep(F.y,F.y+fz,vY)); }
       if(B.z>0.5) w=1.-w;
-      float hh=Cc.z; vec3 col=clamp(abs(fract(vec3(hh)+vec3(1.,2./3.,1./3.))*6.-3.)-1.,0.,1.); col/=max(dot(col,LW),1e-3);
-      vec3 g=mix(vec3(1.),col,Cc.w)*exp2(Cc.x);
-      gain*=mix(vec3(1.),g,w); satm*=mix(1.,1.+Cc.y,w); }
+      if(i==uShowMask) showW=w;
+      vec3 col=clamp(abs(fract(vec3(Cc.z)+vec3(1.,2./3.,1./3.))*6.-3.)-1.,0.,1.); col/=max(dot(col,LW),1e-3);
+      vec3 tg=vec3(1.+0.35*E.x, 1.-0.3*E.y, 1.-0.35*E.x)*vec3(1.+0.15*E.y,1.,1.+0.15*E.y); tg/=max(dot(tg,LW),1e-3);
+      vec3 g=mix(vec3(1.),col,Cc.w)*tg*exp2(Cc.x);
+      gain*=mix(vec3(1.),g,w); satm*=mix(1.,1.+Cc.y,w);
+      lCon+=D.x*w; lHi+=D.y*w; lSh+=D.z*w; lCla+=D.w*w; }
     x*=gain; float ly=lum(x); x=max(mix(vec3(ly),x,satm),0.); }
   float bL=bLr*uGainLum;
   /* dehaze */
@@ -566,7 +577,7 @@ void main(){
   float ws=1.-smoothstep(-6.,0.5,La), wh=smoothstep(-1.,2.8,La);
   float mid=exp(-((L+0.5)*(L+0.5))/6.);
   float msk=uSharpMask>0.? smoothstep(uSharpMask*0.25,uSharpMask*0.25+0.08,abs(d2)) : 1.;
-  float Ln=L + uShadows*2.0*ws + uHighlights*1.7*wh + uClarity*0.55*dM*mid + uTexture*0.7*d2 + uSharpAmt*dS*msk;
+  float Ln=L + (uShadows+lSh)*2.0*ws + (uHighlights+lHi)*1.7*wh + (uClarity+lCla)*0.55*dM*mid + uTexture*0.7*d2 + uSharpAmt*dS*msk;
   x*=exp2(Ln-L);
   /* whites, shoulder, blacks, contrast */
   float Yl=max(lum(x),1e-7);
@@ -576,7 +587,8 @@ void main(){
   v=v+(uBlacks>0.? uBlacks*0.08 : uBlacks*0.14)*pow(1.-clamp(v,0.,1.),3.);
   v=clamp(v,0.,1.);
   const float pv=0.43;
-  v= v<pv ? pv*pow(v/pv,uContrastK) : 1.-(1.-pv)*pow((1.-v)/(1.-pv),uContrastK);
+  float kk=uContrastK*max(0.3,1.+lCon*0.55);
+  v= v<pv ? pv*pow(v/pv,kk) : 1.-(1.-pv)*pow((1.-v)/(1.-pv),kk);
   float Yf=eotf1(v);
   x*=Yf/Yl;
   float mx=max(x.r,max(x.g,x.b));
@@ -606,10 +618,24 @@ void main(){
     if(uVigAmt<0.) c*=1.+uVigAmt*f; else c=mix(c,vec3(1.),uVigAmt*f*0.8); }
   if(uGrainAmt>0.){ vec2 gp=uv*uOutPx/uGrainSize; float n=vnoise(gp)-0.5; n=mix(n,vnoise(gp*2.3+17.)-0.5,uGrainRough*0.5);
     float l=clamp(lum(c),0.,1.); c+=n*uGrainAmt*(0.3+3.*l*(1.-l)); }
+  if(showW>0.) c=mix(c,vec3(1.,0.12,0.2),showW*0.55);
   if(uClip){ float hi=max(c.r,max(c.g,c.b)); if(hi>=0.998) c=vec3(1.,0.18,0.12); else if(hi<=0.004) c=vec3(0.15,0.42,1.); }
   if(uDither>0.){ c+=(hashf(gl_FragCoord.xy)+hashf(gl_FragCoord.xy+vec2(91.,37.))-1.)*uDither; }
   o=vec4(clamp(c,0.,1.),1.);
 }`;
+const DAB_FS = `#version 300 es
+precision highp float; precision highp int; precision highp usampler2D;
+uniform usampler2D uProxy; uniform vec2 uC, uMaskSize; uniform float uR, uSoft, uAuto, uTol;
+out vec4 o;
+vec3 px(vec2 uv){ ivec2 ps=textureSize(uProxy,0); return vec3(texelFetch(uProxy,clamp(ivec2(uv*vec2(ps)),ivec2(0),ps-1),0).rgb)/65535.; }
+void main(){ vec2 p=gl_FragCoord.xy; float d=length(p-uC)/uR; if(d>1.) discard;
+  float w=1.-smoothstep(1.-max(uSoft,0.02),1.,d);
+  if(uAuto>0.5){ vec2 cu=uC/uMaskSize; vec2 e=vec2(2.)/uMaskSize;
+    vec3 r=(px(cu)+px(cu+vec2(e.x,0.))+px(cu-vec2(e.x,0.))+px(cu+vec2(0.,e.y))+px(cu-vec2(0.,e.y)))*0.2;
+    vec3 c=px(p/uMaskSize); float sr=r.r+r.g+r.b, sc=c.r+c.g+c.b;
+    float dist=length(c/max(sc,1e-6)-r/max(sr,1e-6))*3.+abs(log2(max(sc,1e-5))-log2(max(sr,1e-5)))*0.3;
+    w*=1.-smoothstep(uTol,uTol*1.6+0.03,dist); }
+  o=vec4(w); }`;
 function compile(fs) {
   const p = gl.createProgram();
   for (const [type, src] of [[gl.VERTEX_SHADER, VS], [gl.FRAGMENT_SHADER, fs]]) {
@@ -626,7 +652,7 @@ let PR = null;
 if (glOK) {
   try {
     PR = { areaUF: compile(areaFS(true,false)), areaUU: compile(areaFS(true,true)), areaFF: compile(areaFS(false,false)),
-           gaussU: compile(gaussFS(true)), gaussF: compile(gaussFS(false)), main: compile(MAIN_FS) };
+           gaussU: compile(gaussFS(true)), gaussF: compile(gaussFS(false)), main: compile(MAIN_FS), dab: compile(DAB_FS) };
   } catch (e) { console.error(e); glOK = false; }
 }
 const vao = glOK ? gl.createVertexArray() : null;
@@ -792,7 +818,7 @@ function uniformsFor(p, L) {
 }
 function oriDims(p, w, h) { return (p.orient % 2) ? [h, w] : [w, h]; }
 function drawMain(L, p, o) {
-  updateCurve(p);
+  updateCurve(p); syncMaskTex(p);
   const [ow, oh] = oriDims(p, L.w, L.h);
   const crop = o.crop || p.crop;
   const u = uniformsFor(p, L);
@@ -800,12 +826,12 @@ function drawMain(L, p, o) {
     uSrcSize: [L.w, L.h], uOriSize: [ow, oh], uOutPx: [crop.w*ow, crop.h*oh], uOrient: I(p.orient), uFlipH: !!p.flipH,
     uAngle: p.angle*Math.PI/180, uCrop: [crop.x, crop.y, crop.w, crop.h],
     uVp: o.vp, uOut0: o.out0, uOut1: o.out1, uFlipY: !!o.flipY, uBg: o.bg || [0,0,0],
-    uClip: !!o.clip, uDither: o.dither || 0
+    uClip: !!o.clip, uDither: o.dither || 0, uShowMask: I(o.showMask ?? -1), uLumGain: Math.pow(2, p.exposure + IMG.baseline)
   });
   gl.useProgram(PR.main); gl.bindVertexArray(vao);
   if (o.dst) fboFor(o.dst); else gl.bindFramebuffer(gl.FRAMEBUFFER, null);
   gl.viewport(o.vp[0], o.vp[1], o.vp[2], o.vp[3]);
-  const texs = [['uBase', L.base], ['uBS', L.blur.S], ['uB2', L.blur['2']], ['uB3', L.blur['3']], ['uBM', L.blur.M], ['uBL', L.blur.L], ['uCurve', curveTex]];
+  const texs = [['uBase', L.base], ['uBS', L.blur.S], ['uB2', L.blur['2']], ['uB3', L.blur['3']], ['uBM', L.blur.M], ['uBL', L.blur.L], ['uCurve', curveTex], ['uMaskTex', maskTex]];
   let unit = 0; for (const [n, t] of texs) { gl.activeTexture(gl.TEXTURE0+unit); gl.bindTexture(gl.TEXTURE_2D, t); gl.uniform1i(PR.main.u(n), unit); unit++; }
   for (const k in u) setU(PR.main, k, u[k]);
   gl.drawArrays(gl.TRIANGLES, 0, 3);
@@ -868,14 +894,16 @@ function render() {
     vp = [Math.round((cw-dw)/2), Math.round((ch-dh)/2), Math.round(dw), Math.round(dh)];
     if (ensureFull()) L = levels.full;
   } else {
-    const pad = (view.crop ? 28 : 18)*dpr;
+    const small = window.innerWidth <= 900;
+    const pad = (view.crop ? (small ? 18 : 28) : (small ? 6 : 18))*dpr;
     const s = Math.min((cw-2*pad)/outW, (ch-2*pad)/outH);
     const dw = outW*s, dh = outH*s;
     vp = [Math.round((cw-dw)/2), Math.round((ch-dh)/2), Math.round(dw), Math.round(dh)];
     if (Math.max(dw, dh) > PROXY_LONG*1.05 && Math.max(SRC.w, SRC.h) > PROXY_LONG && ensureFull()) L = levels.full;
   }
   updateBlurs(L, false);
-  drawMain(L, p, { vp, out0, out1, flipY: true, bg, clip: view.clip && !view.crop, dither: 0.6/255, crop });
+  const showMask = view.masks && !view.before && !previewParams && (showSel || painting) && selMask >= 0 ? selMask : -1;
+  drawMain(L, p, { vp, out0, out1, flipY: true, bg, clip: view.clip && !view.crop, dither: 0.6/255, crop, showMask });
   view.map = { vp, out0, out1, dpr, outW, outH, Wf, Hf };
   drawOverlay();
   $('#zoomtag').style.display = view.mode === 'zoom' && !view.crop ? 'block' : 'none';
@@ -1141,7 +1169,7 @@ function buildPanels() {
   makeSlider(b, { path:'tint', label:'Tint', min:-150, max:150, def: () => IMG ? IMG.asShotTint : 0, onSet: () => { params.wbAsShot = false; },
     grad:'linear-gradient(90deg,#4fae55,#cfd8cf 45%,#dccfdc 55%,#c04fc0)' });
   // Presence
-  b = section('masks', 'Light and masks', false);
+  b = section('masks', 'Selections and light', false);
   buildMasksSection(b);
   b = section('heal', 'Healing', false);
   buildHealSection(b);
@@ -1611,6 +1639,7 @@ async function openPhoto(file) {
     params = Object.assign(defaultParams(IMG), saved || {});
     levels.proxy = buildLevel(Math.min(PROXY_LONG, Math.max(SRC.w, SRC.h)));
     IMG.auto = analyseAuto();
+    maskKey = '\u0000';
     history = []; hIndex = -1; commit(); presetCtx = null; activePresetId = null; refreshAmount(); renderPresets();
     $('#empty').style.display = 'none';
     $('#fname').textContent = file.name; $('#fname').classList.remove('muted');
@@ -1690,6 +1719,8 @@ document.addEventListener('keydown', e => {
   else if (view.heal && (e.key === 'Delete' || e.key === 'Backspace') && selHeal >= 0) deleteHeal(selHeal);
   else if (e.key === 'Escape' && view.heal) setHeal(false);
   else if ((e.key === 'Delete' || e.key === 'Backspace') && view.masks && selMask >= 0) deleteMask(selMask);
+  else if (view.masks && (e.key === '[' || e.key === ']')) { brushR = clamp(brushR*(e.key === ']' ? 1.15 : 1/1.15), 0.003, 0.25); renderMaskControls(); requestRender(); }
+  else if (view.masks && e.key.toLowerCase() === 'o') { showSel = !showSel; renderMaskControls(); requestRender(); }
   else if (e.key === 'Escape' && view.masks) setMasks(false);
   else if (e.key.toLowerCase() === 'j') $('#btnClip').click();
   else if (e.key === 'Escape' && view.crop) setCrop(false);
@@ -1835,197 +1866,315 @@ async function encodePNG16(W, H, rows, progress) {
 
 
 
-/* ================= lights and masks ================= */
-let selMask = -1, maskBox = null;
-const MASK_KINDS = {
-  light:  { name:'Light', make: () => ({ type:'radial', x:0.5, y:0.4, rx:0.16, ry:0.16, a:0, f:85, inv:false, exp:0.8, sat:0, hue:35, camt:25 }) },
-  dark:   { name:'Background', make: () => ({ type:'radial', x:0.5, y:0.45, rx:0.2, ry:0.3, a:0, f:70, inv:true, exp:-1.4, sat:-25, hue:210, camt:0 }) },
-  grad:   { name:'Gradient', make: () => ({ type:'linear', x:0.5, y:0.35, rx:0.12, ry:0.12, a:0, f:100, inv:false, exp:-0.8, sat:0, hue:210, camt:0 }) }
+/* ================= selections and light ================= */
+let selMask = -1, maskBox = null, showSel = false, painting = false, pickingColour = false;
+let brushR = 0.03, brushSoft = 60, brushErase = false, brushAuto = false, brushTol = 0.35, brushHover = null;
+const MASK_NEW = {
+  brush:  { name:'Brush', make: () => ({ type:'brush', strokes:[] }) },
+  colour: { name:'Colour', make: () => ({ type:'colour', ref:null, tol:30 }) },
+  bright: { name:'Brightness', make: () => ({ type:'lum', rlo:65, rhi:100, rsoft:12 }) },
+  radial: { name:'Radial', make: () => ({ type:'radial', x:0.5, y:0.45, rx:0.18, ry:0.24, a:0, f:70 }) },
+  grad:   { name:'Gradient', make: () => ({ type:'linear', x:0.5, y:0.35, rx:0.12, ry:0.12, a:0, f:100 }) },
+  light:  { name:'Light', make: () => ({ type:'radial', x:0.5, y:0.4, rx:0.16, ry:0.16, a:0, f:85, exp:0.8, hue:35, camt:25 }) },
+  dark:   { name:'Background', make: () => ({ type:'radial', x:0.5, y:0.45, rx:0.2, ry:0.3, a:0, f:70, inv:true, exp:-1.4, sat:-25 }) }
 };
+const ADJ_DEF = { inv:false, exp:0, con:0, hi:0, sh:0, cla:0, temp:0, tnt:0, sat:0, hue:35, camt:0 };
+function normMask(m) { for (const k in ADJ_DEF) if (m[k] === undefined) m[k] = ADJ_DEF[k]; return m; }
+function brushChannels(ms) { const ch = {}; let n = 0; ms.forEach((m, i) => { if (m.type === 'brush' && n < 4) ch[i] = n++; }); return ch; }
 function maskUniforms(p) {
-  const ms = (p.masks || []).slice(0, 8);
-  const A = new Float32Array(32), B = new Float32Array(32), C = new Float32Array(32);
+  const ms = (p.masks || []).slice(0, 8).map(normMask); const ch = brushChannels(ms);
+  const F32 = () => new Float32Array(32); const A = F32(), B = F32(), C = F32(), D = F32(), E = F32(), F = F32();
+  const TY = { radial:0, linear:1, brush:2, colour:3, lum:4 };
   ms.forEach((m, i) => {
-    A.set([m.x, m.y, m.rx, m.ry], i*4);
-    B.set([m.a*Math.PI/180, m.f/100, m.inv ? 1 : 0, m.type === 'linear' ? 1 : 0], i*4);
-    C.set([m.exp, m.sat/100, ((m.hue % 360) + 360) % 360 / 360, m.camt/100], i*4);
+    const ty = TY[m.type] ?? 0;
+    A.set([m.x ?? 0.5, m.y ?? 0.5, m.rx ?? 0.1, m.ry ?? 0.1], i*4);
+    B.set([(m.a || 0)*Math.PI/180, (m.f ?? 70)/100, m.inv ? 1 : 0, ty], i*4);
+    C.set([m.exp, m.sat/100, ((m.hue % 360) + 360) % 360/360, m.camt/100], i*4);
+    D.set([m.con/100, m.hi/100, m.sh/100, m.cla/100], i*4);
+    E.set([m.temp/100, m.tnt/100, ty === 2 ? (ch[i] ?? -1) : 0, 0], i*4);
+    if (ty === 3) F.set(m.ref ? [m.ref[0], m.ref[1], m.ref[2], m.tol/100*0.5] : [0, 0, 0, -1], i*4);
+    if (ty === 4) F.set([m.rlo/100, m.rhi/100, m.rsoft/100, 0], i*4);
   });
-  return { uMkN: I(ms.length), uMkA: { v4: A }, uMkB: { v4: B }, uMkC: { v4: C } };
+  return { uMkN: I(ms.length), uMkA: { v4: A }, uMkB: { v4: B }, uMkC: { v4: C }, uMkD: { v4: D }, uMkE: { v4: E }, uMkF: { v4: F } };
+}
+/* brush selections are painted into one RGBA texture: up to four brush selections, one per channel */
+let maskTex = null, maskKey = '';
+function ensureMaskTex() {
+  if (!SRC) { if (!maskTex) { maskTex = newTex(1, 1, 'RGBA8', true); } return; }
+  const s = Math.min(1, 3072/Math.max(SRC.w, SRC.h)); const w = Math.max(1, Math.round(SRC.w*s)), h = Math.max(1, Math.round(SRC.h*s));
+  if (!maskTex || maskTex.w !== w || maskTex.h !== h) { delTex(maskTex); maskTex = newTex(w, h, 'RGBA8', true); maskKey = '\u0000'; }
+}
+function brushKey(p) { const ms = (p.masks || []).slice(0, 8); const ch = brushChannels(ms); return JSON.stringify(ms.map((m, i) => m.type === 'brush' ? [ch[i], m.strokes] : 0)); }
+function syncMaskTex(p) {
+  ensureMaskTex(); if (!SRC) return;
+  const k = brushKey(p); if (k === maskKey) return; maskKey = k;
+  fboFor(maskTex); gl.viewport(0, 0, maskTex.w, maskTex.h); gl.colorMask(true, true, true, true); gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT);
+  const ms = (p.masks || []).slice(0, 8); const ch = brushChannels(ms);
+  ms.forEach((m, i) => { if (m.type === 'brush' && ch[i] !== undefined) for (const st of m.strokes) drawDabs(st, ch[i], 0); });
+}
+function drawDabs(st, ch, from) {
+  const L = levels.proxy; if (!L || !maskTex) return;
+  const mw = maskTex.w, mh = maskTex.h, rpx = Math.max(1, st.r*Math.max(mw, mh));
+  const pr = PR.dab; gl.useProgram(pr); gl.bindVertexArray(vao); fboFor(maskTex); gl.viewport(0, 0, mw, mh);
+  gl.enable(gl.BLEND); gl.enable(gl.SCISSOR_TEST);
+  if (st.erase) { gl.blendEquation(gl.FUNC_REVERSE_SUBTRACT); gl.blendFunc(gl.ONE, gl.ONE); } else gl.blendEquation(gl.MAX);
+  gl.colorMask(ch === 0, ch === 1, ch === 2, ch === 3);
+  gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, L.base); gl.uniform1i(pr.u('uProxy'), 0);
+  setU(pr, 'uR', rpx); setU(pr, 'uSoft', st.soft/100); setU(pr, 'uAuto', st.auto ? 1 : 0); setU(pr, 'uTol', st.tol ?? 0.35); setU(pr, 'uMaskSize', [mw, mh]);
+  for (let i = from; i < st.pts.length; i += 2) {
+    const cx = st.pts[i]*mw, cy = st.pts[i+1]*mh;
+    const x0 = Math.max(0, Math.floor(cx - rpx - 1)), y0 = Math.max(0, Math.floor(cy - rpx - 1)), x1 = Math.min(mw, Math.ceil(cx + rpx + 1)), y1 = Math.min(mh, Math.ceil(cy + rpx + 1));
+    if (x1 <= x0 || y1 <= y0) continue;
+    gl.scissor(x0, y0, x1 - x0, y1 - y0); setU(pr, 'uC', [cx, cy]); gl.drawArrays(gl.TRIANGLES, 0, 3);
+  }
+  gl.disable(gl.BLEND); gl.disable(gl.SCISSOR_TEST); gl.blendEquation(gl.FUNC_ADD); gl.colorMask(true, true, true, true);
 }
 function setMasks(on) {
   if (on && !IMG) return;
   if (on && view.crop) setCrop(false);
   if (on && view.heal) setHeal(false);
-  view.masks = on; $('#btnMasks').setAttribute('aria-pressed', on); $('#stage').classList.toggle('masking', on);
+  view.masks = on; $('#btnMasks').setAttribute('aria-pressed', on); $('#stage').classList.toggle('masking', on || !!view.heal);
   const sec = $('#sec_masks'); if (sec && sec.open !== on && on) sec.open = true;
   if (on && selMask < 0 && params.masks.length) selMask = 0;
+  if (!on) pickingColour = false;
   requestRender();
 }
 function addMask(kind) {
   if (!IMG) return;
-  if (params.masks.length >= 8) { toast('You can have up to eight lights and masks. Delete one to add another.'); return; }
+  if (params.masks.length >= 8) { toast('You can have up to eight selections. Delete one to add another.'); return; }
+  if (kind === 'brush' && params.masks.filter(m => m.type === 'brush').length >= 4) { toast('You can have up to four brush selections. Add to an existing one instead.'); return; }
   const n = params.masks.filter(m => m.kind === kind).length + 1;
-  const m = Object.assign(MASK_KINDS[kind].make(), { kind, name: `${MASK_KINDS[kind].name} ${n}` });
+  const m = normMask(Object.assign(MASK_NEW[kind].make(), { kind, name: `${MASK_NEW[kind].name} ${n}` }));
   params.masks.push(m); selMask = params.masks.length - 1;
+  pickingColour = kind === 'colour';
+  if (kind === 'brush' || kind === 'colour' || kind === 'bright') showSel = true;
   setMasks(true); renderMaskControls(); requestRender(); commit();
+  if (kind === 'brush') toast('Paint over the area you want to change. Turn on Auto edge to stay inside similar colours.', 4200);
+  if (kind === 'colour') toast('Click the colour you want to select, such as the sky or a jacket.', 3800);
 }
-function deleteMask(i) {
-  params.masks.splice(i, 1); selMask = Math.min(i, params.masks.length - 1);
-  renderMaskControls(); requestRender(); commit();
-}
+function deleteMask(i) { params.masks.splice(i, 1); selMask = Math.min(i, params.masks.length - 1); pickingColour = false; renderMaskControls(); requestRender(); commit(); }
 function buildMasksSection(b) {
   const r = document.createElement('div'); r.className = 'mrow';
-  r.innerHTML = '<button class="btn small" data-k="light">Add light</button><button class="btn small" data-k="dark">Darken background</button><button class="btn small" data-k="grad">Gradient</button>';
-  r.addEventListener('click', e => { const bt = e.target.closest('button'); if (bt) addMask(bt.dataset.k); });
-  b.appendChild(r);
+  r.innerHTML = '<button class="btn small" data-k="brush">Brush</button><button class="btn small" data-k="colour">Colour range</button><button class="btn small" data-k="bright">Brightness range</button><button class="btn small" data-k="radial">Radial</button><button class="btn small" data-k="grad">Gradient</button>';
+  const r2 = document.createElement('div'); r2.className = 'mrow';
+  r2.innerHTML = '<button class="btn small" data-k="light">Add light</button><button class="btn small" data-k="dark">Darken background</button>';
+  for (const x of [r, r2]) { x.addEventListener('click', e => { const bt = e.target.closest('button'); if (bt) addMask(bt.dataset.k); }); b.appendChild(x); }
   maskBox = document.createElement('div'); b.appendChild(maskBox);
   $('#sec_masks').addEventListener('toggle', () => { if (IMG && !$('#sec_masks').open && view.masks) setMasks(false); else if (IMG && $('#sec_masks').open && !view.masks && params.masks.length) setMasks(true); });
   renderMaskControls();
+}
+function miniRange(box, label, min, max, step, val, fmt, onInput) {
+  const row = document.createElement('div'); row.className = 'sl';
+  row.innerHTML = `<label>${label}</label><input type="range" min="${min}" max="${max}" step="${step}" value="${val}" aria-label="${label}"><input class="val" readonly tabindex="-1">`;
+  const rg = row.children[1], v = row.children[2]; v.value = fmt(val);
+  rg.oninput = () => { onInput(+rg.value); v.value = fmt(+rg.value); };
+  box.appendChild(row); return row;
 }
 function renderMaskControls() {
   if (!maskBox) return;
   for (let i = controls.length - 1; i >= 0; i--) if (maskBox.contains(controls[i].row)) controls.splice(i, 1);
   maskBox.innerHTML = '';
   const ms = params.masks || [];
-  if (!ms.length) { const p = document.createElement('p'); p.className = 'note'; p.textContent = 'Add a light to brighten a face or create a glow, darken the background for a low-key portrait, or use a gradient on a sky or floor.'; maskBox.appendChild(p); return; }
-  if (selMask >= ms.length) selMask = ms.length - 1;
-  if (selMask < 0) selMask = 0;
+  if (!ms.length) { const p = document.createElement('p'); p.className = 'note'; p.textContent = 'Select part of the photo to edit it on its own: paint it with the brush, pick a colour, choose a brightness range, or use a radial or gradient shape.'; maskBox.appendChild(p); return; }
+  if (selMask >= ms.length) selMask = ms.length - 1; if (selMask < 0) selMask = 0;
   const list = document.createElement('div'); list.className = 'mrow';
   ms.forEach((m, i) => { const bt = document.createElement('button'); bt.className = 'btn small'; bt.textContent = m.name; bt.setAttribute('aria-pressed', String(i === selMask));
-    bt.onclick = () => { selMask = i; setMasks(true); renderMaskControls(); }; list.appendChild(bt); });
+    bt.onclick = () => { selMask = i; pickingColour = false; setMasks(true); renderMaskControls(); requestRender(); }; list.appendChild(bt); });
   maskBox.appendChild(list);
-  const m = ms[selMask], i = selMask;
+  const m = normMask(ms[selMask]), i = selMask;
+  sub(maskBox, 'Selection');
+  if (m.type === 'brush') {
+    const sg = document.createElement('div'); sg.className = 'seg';
+    sg.innerHTML = `<button aria-pressed="${!brushErase}">Paint</button><button aria-pressed="${brushErase}">Erase</button>`;
+    sg.children[0].onclick = () => { brushErase = false; renderMaskControls(); }; sg.children[1].onclick = () => { brushErase = true; renderMaskControls(); };
+    maskBox.appendChild(sg);
+    miniRange(maskBox, 'Size', 0.3, 25, 0.1, +(brushR*100).toFixed(1), v => v.toFixed(1) + '%', v => { brushR = v/100; requestRender(); });
+    miniRange(maskBox, 'Softness', 0, 100, 1, brushSoft, v => String(v), v => { brushSoft = v; });
+    const ae = document.createElement('label'); ae.className = 'chk'; ae.innerHTML = `<input type="checkbox" ${brushAuto ? 'checked' : ''}> Auto edge (only paint similar colours)`;
+    ae.querySelector('input').onchange = e => { brushAuto = e.target.checked; renderMaskControls(); }; maskBox.appendChild(ae);
+    if (brushAuto) miniRange(maskBox, 'Edge range', 0.1, 1, 0.01, brushTol, v => Math.round(v*100) + '%', v => { brushTol = v; });
+    const cl = document.createElement('div'); cl.className = 'row'; cl.style.margin = '4px 0';
+    cl.innerHTML = `<span class="note">${m.strokes.length} stroke${m.strokes.length === 1 ? '' : 's'}</span><span style="flex:1"></span><button class="btn small" ${m.strokes.length ? '' : 'disabled'}>Undo stroke</button><button class="btn small" ${m.strokes.length ? '' : 'disabled'}>Clear</button>`;
+    cl.children[2].onclick = () => { m.strokes.pop(); renderMaskControls(); requestRender(); commit(); };
+    cl.children[3].onclick = () => { m.strokes = []; renderMaskControls(); requestRender(); commit(); };
+    maskBox.appendChild(cl);
+  } else if (m.type === 'colour') {
+    const pk = document.createElement('div'); pk.className = 'row'; pk.style.margin = '2px 0 4px';
+    const sw = m.ref ? (() => { const s = Math.max(m.ref[0], m.ref[1], m.ref[2]); return `rgb(${m.ref.map(v => Math.round(Math.pow(v/s, 1/2.2)*235)).join(',')})`; })() : 'transparent';
+    pk.innerHTML = `<span style="width:22px;height:22px;border-radius:5px;border:1px solid var(--line);background:${sw}"></span><button class="btn small" aria-pressed="${pickingColour}">${pickingColour ? 'Click the photo…' : m.ref ? 'Pick another colour' : 'Pick colour'}</button>`;
+    pk.querySelector('button').onclick = () => { pickingColour = !pickingColour; setMasks(true); renderMaskControls(); };
+    maskBox.appendChild(pk);
+    makeSlider(maskBox, { path:`masks.${i}.tol`, label:'Tolerance', min:1, max:100, def:30 });
+  } else if (m.type === 'lum') {
+    makeSlider(maskBox, { path:`masks.${i}.rlo`, label:'From', min:0, max:100, def:65 });
+    makeSlider(maskBox, { path:`masks.${i}.rhi`, label:'To', min:0, max:100, def:100 });
+    makeSlider(maskBox, { path:`masks.${i}.rsoft`, label:'Softness', min:0, max:50, def:12 });
+  } else {
+    makeSlider(maskBox, { path:`masks.${i}.f`, label: m.type === 'linear' ? 'Softness' : 'Feather', min:0, max:100, def: m.type === 'linear' ? 100 : 70 });
+  }
+  const opt = document.createElement('div'); opt.className = 'row'; opt.style.margin = '4px 0 2px';
+  opt.innerHTML = `<label class="chk" style="margin:0"><input type="checkbox" ${m.inv ? 'checked' : ''}> Invert</label><label class="chk" style="margin:0"><input type="checkbox" ${showSel ? 'checked' : ''}> Show selection (O)</label>`;
+  opt.children[0].querySelector('input').onchange = e => { m.inv = e.target.checked; requestRender(); commit(); };
+  opt.children[1].querySelector('input').onchange = e => { showSel = e.target.checked; requestRender(); };
+  maskBox.appendChild(opt);
+  sub(maskBox, 'Adjust the selection');
   makeSlider(maskBox, { path:`masks.${i}.exp`, label:'Exposure', min:-4, max:4, step:0.01, dp:2, def:0 });
+  makeSlider(maskBox, { path:`masks.${i}.con`, label:'Contrast', min:-100, max:100, def:0 });
+  makeSlider(maskBox, { path:`masks.${i}.hi`, label:'Highlights', min:-100, max:100, def:0 });
+  makeSlider(maskBox, { path:`masks.${i}.sh`, label:'Shadows', min:-100, max:100, def:0 });
+  makeSlider(maskBox, { path:`masks.${i}.cla`, label:'Clarity', min:-100, max:100, def:0 });
+  makeSlider(maskBox, { path:`masks.${i}.temp`, label:'Temp', min:-100, max:100, def:0, grad:'linear-gradient(90deg,#4a7fd6,#c9d4e6 45%,#e9d9b0 55%,#e0a13a)' });
+  makeSlider(maskBox, { path:`masks.${i}.tnt`, label:'Tint', min:-100, max:100, def:0, grad:'linear-gradient(90deg,#4fae55,#cfd8cf 45%,#dccfdc 55%,#c04fc0)' });
+  makeSlider(maskBox, { path:`masks.${i}.sat`, label:'Saturation', min:-100, max:100, def:0 });
   makeSlider(maskBox, { path:`masks.${i}.hue`, label:'Colour', min:0, max:359, fmt: v => Math.round(v) + '°', def: m.hue,
     grad:'linear-gradient(90deg,hsl(0,80%,55%),hsl(60,80%,55%),hsl(120,80%,55%),hsl(180,80%,55%),hsl(240,80%,55%),hsl(300,80%,55%),hsl(360,80%,55%))' });
   makeSlider(maskBox, { path:`masks.${i}.camt`, label:'Colour mix', min:0, max:100, def:0 });
-  makeSlider(maskBox, { path:`masks.${i}.sat`, label:'Saturation', min:-100, max:100, def:0 });
-  makeSlider(maskBox, { path:`masks.${i}.f`, label: m.type === 'linear' ? 'Softness' : 'Feather', min:0, max:100, def: m.type === 'linear' ? 100 : 70 });
-  const row = document.createElement('div'); row.className = 'row'; row.style.marginTop = '6px';
-  row.innerHTML = `<label class="chk" style="margin:0"><input type="checkbox" ${m.inv ? 'checked' : ''}> Invert</label><span style="flex:1"></span><button class="btn small">Delete</button>`;
-  row.querySelector('input').onchange = e => { m.inv = e.target.checked; requestRender(); commit(); };
-  row.querySelector('button').onclick = () => deleteMask(i);
-  maskBox.appendChild(row);
-  const n = document.createElement('p'); n.className = 'note';
-  n.textContent = m.type === 'linear' ? 'Drag the line to move it. Drag the round handle to rotate it and set the transition width.' : 'Drag the shape on the photo to move it. Drag the square handles to resize and the round handle to rotate.';
-  maskBox.appendChild(n);
+  const del = document.createElement('div'); del.className = 'row'; del.style.marginTop = '6px';
+  del.innerHTML = '<span style="flex:1"></span><button class="btn small">Delete selection</button>';
+  del.querySelector('button').onclick = () => deleteMask(i); maskBox.appendChild(del);
+  if (m.type === 'radial' || m.type === 'linear') { const n = document.createElement('p'); n.className = 'note';
+    n.textContent = m.type === 'linear' ? 'Drag the line to move it. Drag the round handle to rotate and set the transition width.' : 'Drag the shape to move it. Drag the square handles to resize and the round handle to rotate.'; maskBox.appendChild(n); }
   syncAll();
 }
-/* coordinate helpers: mask space is the oriented, uncropped frame (0 to 1) */
+/* coordinate helpers: shape space is the oriented, uncropped frame (0 to 1) */
 function mapInfo() {
   const m = view.map; if (!m) return null;
   const crop = view.crop ? { x:0, y:0, w:1, h:1 } : params.crop;
   const d = m.dpr, vp = m.vp.map(v => v/d);
   const ou = m.out1[0] - m.out0[0], ov = m.out1[1] - m.out0[1];
-  const k = vp[2] / (ou*crop.w*m.Wf); // css px per oriented full-res px
+  const k = vp[2] / (ou*crop.w*m.Wf);
   return { crop, vp, ou, ov, k, Wf: m.Wf, Hf: m.Hf, lg: Math.max(m.Wf, m.Hf), m };
 }
-function ocToScreen(x, y, M) {
-  const u = (x - M.crop.x)/M.crop.w, v = (y - M.crop.y)/M.crop.h;
-  return [M.vp[0] + (u - M.m.out0[0])/M.ou*M.vp[2], M.vp[1] + (v - M.m.out0[1])/M.ov*M.vp[3]];
-}
-function screenToOc(sx, sy, M) {
-  const u = M.m.out0[0] + (sx - M.vp[0])/M.vp[2]*M.ou, v = M.m.out0[1] + (sy - M.vp[1])/M.vp[3]*M.ov;
-  return [M.crop.x + u*M.crop.w, M.crop.y + v*M.crop.h];
-}
+function ocToScreen(x, y, M) { const u = (x - M.crop.x)/M.crop.w, v = (y - M.crop.y)/M.crop.h; return [M.vp[0] + (u - M.m.out0[0])/M.ou*M.vp[2], M.vp[1] + (v - M.m.out0[1])/M.ov*M.vp[3]]; }
+function screenToOc(sx, sy, M) { const u = M.m.out0[0] + (sx - M.vp[0])/M.vp[2]*M.ou, v = M.m.out0[1] + (sy - M.vp[1])/M.vp[3]*M.ov; return [M.crop.x + u*M.crop.w, M.crop.y + v*M.crop.h]; }
 function maskHandles(m, M) {
   const [cx, cy] = ocToScreen(m.x, m.y, M); const a = m.a*Math.PI/180, ca = Math.cos(a), sa = Math.sin(a);
   const R = (dx, dy) => [cx + ca*dx - sa*dy, cy + sa*dx + ca*dy];
   const rx = m.rx*M.lg*M.k, ry = m.ry*M.lg*M.k;
-  if (m.type === 'linear') return { c:[cx, cy], rx, ry, R, rot: R(0, -rx - 18), w1: R(0, -rx), w2: R(0, rx) };
+  if (m.type === 'linear') return { c:[cx, cy], rx, ry, R, rot: R(0, -rx - 18) };
   return { c:[cx, cy], rx, ry, R, hx: R(rx, 0), hy: R(0, ry), rot: R(0, -ry - 22) };
 }
+const isShape = m => m.type === 'radial' || m.type === 'linear';
 function drawMasks() {
   const M = mapInfo(); if (!M) return;
   const ms = params.masks || [];
   ms.forEach((m, i) => {
+    if (!isShape(m)) return;
     const H = maskHandles(m, M); const sel = i === selMask;
-    ovc.lineWidth = sel ? 1.5 : 1;
     const stroke = (fn) => { ovc.strokeStyle = 'rgba(0,0,0,.55)'; ovc.lineWidth = sel ? 3.5 : 2.5; fn(); ovc.stroke(); ovc.strokeStyle = sel ? '#fff' : 'rgba(255,255,255,.7)'; ovc.lineWidth = sel ? 1.5 : 1; fn(); ovc.stroke(); };
     if (sel) {
       if (m.type === 'linear') {
         const L = 4000;
-        stroke(() => { ovc.beginPath(); const p1 = H.R(-L, 0), p2 = H.R(L, 0); ovc.moveTo(...p1); ovc.lineTo(...p2); });
-        ovc.setLineDash([5, 5]);
-        stroke(() => { ovc.beginPath(); ovc.moveTo(...H.R(-L, -H.rx)); ovc.lineTo(...H.R(L, -H.rx)); ovc.moveTo(...H.R(-L, H.rx)); ovc.lineTo(...H.R(L, H.rx)); });
-        ovc.setLineDash([]);
+        stroke(() => { ovc.beginPath(); ovc.moveTo(...H.R(-L, 0)); ovc.lineTo(...H.R(L, 0)); });
+        ovc.setLineDash([5, 5]); stroke(() => { ovc.beginPath(); ovc.moveTo(...H.R(-L, -H.rx)); ovc.lineTo(...H.R(L, -H.rx)); ovc.moveTo(...H.R(-L, H.rx)); ovc.lineTo(...H.R(L, H.rx)); }); ovc.setLineDash([]);
         stroke(() => { ovc.beginPath(); ovc.moveTo(...H.c); ovc.lineTo(...H.rot); });
       } else {
         stroke(() => { ovc.beginPath(); ovc.ellipse(H.c[0], H.c[1], Math.max(1, H.rx), Math.max(1, H.ry), m.a*Math.PI/180, 0, Math.PI*2); });
         const f = Math.max(0.02, m.f/100);
-        ovc.setLineDash([4, 5]);
-        stroke(() => { ovc.beginPath(); ovc.ellipse(H.c[0], H.c[1], Math.max(1, H.rx*(1-f)), Math.max(1, H.ry*(1-f)), m.a*Math.PI/180, 0, Math.PI*2); });
-        ovc.setLineDash([]);
+        ovc.setLineDash([4, 5]); stroke(() => { ovc.beginPath(); ovc.ellipse(H.c[0], H.c[1], Math.max(1, H.rx*(1-f)), Math.max(1, H.ry*(1-f)), m.a*Math.PI/180, 0, Math.PI*2); }); ovc.setLineDash([]);
         stroke(() => { ovc.beginPath(); ovc.moveTo(...H.R(0, -H.ry)); ovc.lineTo(...H.rot); });
         for (const h of [H.hx, H.hy]) { ovc.fillStyle = '#fff'; ovc.strokeStyle = 'rgba(0,0,0,.6)'; ovc.lineWidth = 1; ovc.fillRect(h[0]-5, h[1]-5, 10, 10); ovc.strokeRect(h[0]-5, h[1]-5, 10, 10); }
       }
-      ovc.fillStyle = '#fff'; ovc.strokeStyle = 'rgba(0,0,0,.6)'; ovc.lineWidth = 1;
-      ovc.beginPath(); ovc.arc(H.rot[0], H.rot[1], 6, 0, Math.PI*2); ovc.fill(); ovc.stroke();
+      ovc.fillStyle = '#fff'; ovc.strokeStyle = 'rgba(0,0,0,.6)'; ovc.lineWidth = 1; ovc.beginPath(); ovc.arc(H.rot[0], H.rot[1], 6, 0, Math.PI*2); ovc.fill(); ovc.stroke();
     }
     ovc.beginPath(); ovc.arc(H.c[0], H.c[1], sel ? 7 : 6, 0, Math.PI*2);
     ovc.fillStyle = sel ? getComputedStyle(document.documentElement).getPropertyValue('--accent') : '#fff'; ovc.fill();
     ovc.strokeStyle = 'rgba(0,0,0,.6)'; ovc.lineWidth = 1.5; ovc.stroke();
   });
+  const cur = ms[selMask];
+  if (brushHover && cur && cur.type === 'brush') {
+    const r = Math.max(3, brushR*Math.max(SRC.w, SRC.h)*M.k);
+    ovc.setLineDash([]); ovc.lineWidth = 2.5; ovc.strokeStyle = 'rgba(0,0,0,.5)'; ovc.beginPath(); ovc.arc(brushHover[0], brushHover[1], r, 0, Math.PI*2); ovc.stroke();
+    ovc.lineWidth = 1; ovc.strokeStyle = brushErase ? '#ffb3b3' : '#fff'; ovc.beginPath(); ovc.arc(brushHover[0], brushHover[1], r, 0, Math.PI*2); ovc.stroke();
+    const ri = r*(1 - brushSoft/100); if (ri > 2) { ovc.setLineDash([2, 3]); ovc.beginPath(); ovc.arc(brushHover[0], brushHover[1], ri, 0, Math.PI*2); ovc.stroke(); ovc.setLineDash([]); }
+  }
 }
-let mDrag = null;
+function screenToSrcNorm(x, y, M) { const [u, v] = screenToOc(x, y, M); const [sx, sy] = ocToSrc(u, v); return [sx/SRC.w, sy/SRC.h]; }
+let mDrag = null, stroke = null;
 const ovEl = $('#overlay');
 ovEl.addEventListener('pointerdown', e => {
   if (!view.masks) return;
   const M = mapInfo(); if (!M) return;
   const b = ovEl.getBoundingClientRect(); const x = e.clientX - b.left, y = e.clientY - b.top;
-  const ms = params.masks; let hit = null;
-  const near = (p, r = 11) => p && Math.hypot(x - p[0], y - p[1]) < r;
-  if (selMask >= 0 && ms[selMask]) {
-    const H = maskHandles(ms[selMask], M);
-    if (near(H.rot)) hit = { i: selMask, mode: 'rot' };
-    else if (near(H.hx)) hit = { i: selMask, mode: 'rx' };
-    else if (near(H.hy)) hit = { i: selMask, mode: 'ry' };
+  const ms = params.masks; const cur = ms[selMask];
+  if (cur && cur.type === 'colour' && (pickingColour || !cur.ref)) {
+    const [nx, ny] = screenToSrcNorm(x, y, M); const sx = nx*SRC.w, sy = ny*SRC.h;
+    if (sx < 0 || sy < 0 || sx >= SRC.w || sy >= SRC.h) return;
+    const reg = readRegion(sx, sy, 8); const sm = meanOf(ringSamples(reg, sx, sy, 5, 0, 1, 24));
+    if (sm) { const s = sm[0] + sm[1] + sm[2]; if (s > 1e-5) cur.ref = sm.map(v => Math.round(v/s*1e4)/1e4); }
+    pickingColour = false; renderMaskControls(); requestRender(); commit(); return;
   }
-  if (!hit) ms.forEach((m, i) => { if (!hit && near(maskHandles(m, M).c, 13)) hit = { i, mode: 'move' }; });
-  if (!hit && selMask >= 0 && ms[selMask]) {
-    const m = ms[selMask], H = maskHandles(m, M); const a = -m.a*Math.PI/180;
+  if (cur && cur.type === 'brush') {
+    const ch = brushChannels(ms.slice(0, 8))[selMask];
+    if (ch === undefined) { toast('This brush selection is beyond the limit of four, so it can\'t be painted.'); return; }
+    syncMaskTex(params);
+    const [nx, ny] = screenToSrcNorm(x, y, M);
+    stroke = { r: brushR, soft: brushSoft, erase: brushErase, auto: brushAuto, tol: brushTol, pts: [+nx.toFixed(5), +ny.toFixed(5)] };
+    cur.strokes.push(stroke); drawDabs(stroke, ch, 0); maskKey = brushKey(params);
+    painting = true; ovEl.setPointerCapture(e.pointerId); requestRender(); return;
+  }
+  let hit = null;
+  const near = (p, r = 11) => p && Math.hypot(x - p[0], y - p[1]) < r;
+  if (cur && isShape(cur)) {
+    const H = maskHandles(cur, M);
+    if (near(H.rot)) hit = { i: selMask, mode: 'rot' }; else if (near(H.hx)) hit = { i: selMask, mode: 'rx' }; else if (near(H.hy)) hit = { i: selMask, mode: 'ry' };
+  }
+  if (!hit) ms.forEach((m, i) => { if (!hit && isShape(m) && near(maskHandles(m, M).c, 13)) hit = { i, mode: 'move' }; });
+  if (!hit && cur && isShape(cur)) {
+    const H = maskHandles(cur, M); const a = -cur.a*Math.PI/180;
     const dx = x - H.c[0], dy = y - H.c[1]; const qx = Math.cos(a)*dx - Math.sin(a)*dy, qy = Math.sin(a)*dx + Math.cos(a)*dy;
-    const inside = m.type === 'linear' ? Math.abs(qy) < Math.max(12, H.rx) : (qx*qx)/(H.rx*H.rx) + (qy*qy)/(H.ry*H.ry) <= 1;
+    const inside = cur.type === 'linear' ? Math.abs(qy) < Math.max(12, H.rx) : (qx*qx)/(H.rx*H.rx) + (qy*qy)/(H.ry*H.ry) <= 1;
     if (inside) hit = { i: selMask, mode: 'move' };
   }
   if (!hit) return;
   if (hit.i !== selMask) { selMask = hit.i; renderMaskControls(); }
-  const m = ms[hit.i]; const [ox, oy] = screenToOc(x, y, M);
-  mDrag = { ...hit, start: clone(m), ox, oy, M };
+  const [ox, oy] = screenToOc(x, y, M);
+  mDrag = { ...hit, start: clone(ms[hit.i]), ox, oy, M };
   ovEl.setPointerCapture(e.pointerId); requestRender();
 });
 ovEl.addEventListener('pointermove', e => {
   if (!view.masks) return;
   const b = ovEl.getBoundingClientRect(); const x = e.clientX - b.left, y = e.clientY - b.top;
-  if (!mDrag) {
-    const M = mapInfo(); if (!M) return; let cur = 'default';
-    if (selMask >= 0 && params.masks[selMask]) { const H = maskHandles(params.masks[selMask], M);
-      if ([H.rot].some(p => p && Math.hypot(x-p[0], y-p[1]) < 11)) cur = 'grab';
-      else if ([H.hx, H.hy].some(p => p && Math.hypot(x-p[0], y-p[1]) < 11)) cur = 'nwse-resize'; }
-    if (cur === 'default' && params.masks.some(m => { const c = maskHandles(m, M).c; return Math.hypot(x-c[0], y-c[1]) < 13; })) cur = 'move';
-    ovEl.style.cursor = cur; return;
+  const M = mapInfo(); if (!M) return;
+  const cur = params.masks[selMask];
+  if (stroke && cur) {
+    const [nx, ny] = screenToSrcNorm(x, y, M);
+    const n = stroke.pts.length; const lx = stroke.pts[n-2], ly = stroke.pts[n-1];
+    const step = Math.max(stroke.r*0.25, 0.0008); const dist = Math.hypot((nx - lx)*SRC.w, (ny - ly)*SRC.h)/Math.max(SRC.w, SRC.h);
+    if (dist >= step) {
+      const k = Math.floor(dist/step);
+      for (let j = 1; j <= k; j++) { const t = j*step/dist; stroke.pts.push(+(lx + (nx - lx)*t).toFixed(5), +(ly + (ny - ly)*t).toFixed(5)); }
+      drawDabs(stroke, brushChannels(params.masks.slice(0, 8))[selMask], n); maskKey = brushKey(params);
+    }
+    brushHover = [x, y]; requestRender(); return;
   }
-  const { M, start, mode } = mDrag; const m = params.masks[mDrag.i];
-  const [px, py] = screenToOc(x, y, M);
-  const toPx = (u, v) => [(u - start.x)*M.Wf, (v - start.y)*M.Hf]; // oriented full-res px from centre
+  if (!mDrag) {
+    brushHover = cur && cur.type === 'brush' ? [x, y] : null;
+    let c = cur && cur.type === 'brush' ? 'none' : cur && cur.type === 'colour' && (pickingColour || !cur.ref) ? 'crosshair' : 'default';
+    if (cur && isShape(cur)) { const H = maskHandles(cur, M);
+      if (Math.hypot(x-H.rot[0], y-H.rot[1]) < 11) c = 'grab'; else if ([H.hx, H.hy].some(p => p && Math.hypot(x-p[0], y-p[1]) < 11)) c = 'nwse-resize'; }
+    if (c === 'default' && params.masks.some(m => isShape(m) && (() => { const q = maskHandles(m, M).c; return Math.hypot(x-q[0], y-q[1]) < 13; })())) c = 'move';
+    ovEl.style.cursor = c; if (brushHover) requestRender(); return;
+  }
+  const { start, mode } = mDrag; const m = params.masks[mDrag.i];
+  const [px, py] = screenToOc(x, y, mDrag.M);
   if (mode === 'move') { m.x = clamp(start.x + px - mDrag.ox, -0.5, 1.5); m.y = clamp(start.y + py - mDrag.oy, -0.5, 1.5); }
   else {
-    const [dx, dy] = toPx(px, py); const a = start.a*Math.PI/180;
+    const dx = (px - start.x)*M.Wf, dy = (py - start.y)*M.Hf; const a = start.a*Math.PI/180;
     const qx = Math.cos(a)*dx + Math.sin(a)*dy, qy = -Math.sin(a)*dx + Math.cos(a)*dy;
     if (mode === 'rx') m.rx = clamp(Math.abs(qx)/M.lg, 0.01, 2);
     else if (mode === 'ry') m.ry = clamp(Math.abs(qy)/M.lg, 0.01, 2);
-    else if (mode === 'rot') {
-      m.a = Math.round(Math.atan2(dx, -dy)*180/Math.PI*10)/10;
-      if (m.type === 'linear') m.rx = clamp(Math.hypot(dx, dy)/M.lg - 18/M.k/M.lg, 0.005, 2);
-    }
+    else if (mode === 'rot') { m.a = Math.round(Math.atan2(dx, -dy)*180/Math.PI*10)/10; if (m.type === 'linear') m.rx = clamp(Math.hypot(dx, dy)/M.lg - 18/M.k/M.lg, 0.005, 2); }
   }
   requestRender();
 });
-const endM = () => { if (mDrag) { mDrag = null; commit(); } };
+ovEl.addEventListener('pointerleave', () => { if (brushHover && !stroke) { brushHover = null; requestRender(); } });
+const endM = () => {
+  if (stroke) { stroke = null; painting = false; renderMaskControls(); commit(); requestRender(); }
+  if (mDrag) { mDrag = null; commit(); }
+};
 ovEl.addEventListener('pointerup', endM); ovEl.addEventListener('pointercancel', endM);
 $('#btnMasks').onclick = () => setMasks(!view.masks);
-
-
 /* ================= spot healing ================= */
 let selHeal = -1, healBox = null, healR = 0.012; // radius as a fraction of the photo's long edge
 function healUniforms(p) {
@@ -2150,11 +2299,12 @@ function renderHealControls() {
   healBox.appendChild(p);
   if (hs.length) {
     const r2 = document.createElement('div'); r2.className = 'row';
-    r2.innerHTML = `<label class="chk" style="margin:0">Edge softness <input type="range" min="10" max="100" value="${hs[Math.max(0, selHeal)] ? hs[Math.max(0, selHeal)].f : 55}" style="width:110px"></label><span style="flex:1"></span><button class="btn small">Remove all</button>`;
+    r2.innerHTML = `<label class="chk" style="margin:0">Edge softness <input type="range" min="10" max="100" value="${hs[Math.max(0, selHeal)] ? hs[Math.max(0, selHeal)].f : 55}" style="width:110px"></label><span style="flex:1"></span>${selHeal >= 0 ? '<button class="btn small" data-a="del">Delete spot</button>' : ''}<button class="btn small" data-a="all">Remove all</button>`;
     const rg = r2.querySelector('input');
     rg.oninput = () => { const h = hs[Math.max(0, selHeal)]; if (h) { h.f = +rg.value; requestRender(); } };
     rg.onchange = commit;
-    r2.querySelector('button').onclick = () => { params.heal = []; selHeal = -1; renderHealControls(); requestRender(); commit(); };
+    r2.querySelector('[data-a=all]').onclick = () => { params.heal = []; selHeal = -1; renderHealControls(); requestRender(); commit(); };
+    const del = r2.querySelector('[data-a=del]'); if (del) del.onclick = () => deleteHeal(selHeal);
     healBox.appendChild(r2);
   }
 }
@@ -2359,7 +2509,7 @@ let thumbsT = null;
 function renderLookThumbsSoon() { clearTimeout(thumbsT); thumbsT = setTimeout(renderLookThumbs, 250); }
 function renderLookThumbs() {
   if (!IMG || !levels.proxy) return;
-  $('#lookNote').textContent = 'Pick a look, then fine-tune it with the strength slider or any adjustment on the right.';
+  $('#lookNote').textContent = 'Pick a look, then fine-tune it with the strength slider or any adjustment in the editing panel.';
   const base = defaultParams(IMG); for (const k of GEOM_KEYS) base[k] = clone(params[k]);
   base.sharp = 0; base.cnr = params.cnr; base.heal = clone(params.heal || []);
   const [Wf, Hf] = oriDims(base, SRC.w, SRC.h); const ar = (base.crop.w*Wf)/(base.crop.h*Hf);
