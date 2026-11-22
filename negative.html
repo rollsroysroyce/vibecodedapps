@@ -60,6 +60,10 @@ aside{overflow-y:auto;overscroll-behavior:contain;min-height:0}
 #gl,#overlay{position:absolute;inset:0;width:100%;height:100%;display:block}
 #overlay{pointer-events:none}
 #stage.cropping #overlay{pointer-events:auto;cursor:crosshair}
+#stage.masking #overlay{pointer-events:auto;cursor:default}
+.mrow{display:flex;gap:4px;flex-wrap:wrap;margin:6px 0 8px}
+.mrow .btn{border:1px solid var(--line)}
+.mrow .btn[aria-pressed="true"]{border-color:var(--accent);color:var(--accent);background:var(--surface2)}
 #stage.zoomed{cursor:grab}
 #stage.zoomed.panning{cursor:grabbing}
 
@@ -207,6 +211,8 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
       <span class="sep hide-sm"></span>
       <button class="btn" id="btnBefore" aria-pressed="false" title="Show the original (\)" disabled>Before</button>
       <button class="btn" id="btnCrop" aria-pressed="false" title="Crop and straighten (C)" disabled>Crop</button>
+      <button class="btn" id="btnMasks" aria-pressed="false" title="Lights and masks (M)" disabled>Light</button>
+      <button class="btn" id="btnHeal" aria-pressed="false" title="Spot healing (H)" disabled>Heal</button>
       <button class="btn" id="btnZoom" aria-pressed="false" title="Toggle fit and 100% (Z)" disabled>100%</button>
       <button class="btn hide-sm" id="btnClip" aria-pressed="false" title="Show clipped highlights and shadows (J)" disabled>Clipping</button>
       <button class="btn hide-sm" id="btnReset" title="Reset all adjustments" disabled>Reset</button>
@@ -376,7 +382,7 @@ function defaultParams(img) {
     cg:{ s:{h:0,s:0,l:0}, m:{h:0,s:0,l:0}, h:{h:0,s:0,l:0}, g:{h:0,s:0,l:0} }, cgBlend:50, cgBal:0,
     sharp: raw ? 40 : 0, sharpRadius:1, sharpDetail:25, sharpMask:0, lnr:0, cnr: raw ? 25 : 0,
     vigAmt:0, vigMid:50, vigRound:0, vigFeather:50, grainAmt:0, grainSize:25, grainRough:50,
-    crop:{x:0,y:0,w:1,h:1}, angle:0, orient:0, flipH:false, aspect:'original', look:null
+    crop:{x:0,y:0,w:1,h:1}, angle:0, orient:0, flipH:false, aspect:'original', look:null, masks:[], heal:[]
   };
 }
 const getPath = (o, p) => p.split('.').reduce((a, k) => a == null ? a : a[k], o);
@@ -443,10 +449,10 @@ void main(){ vec2 p=vec2(float((gl_VertexID<<1)&2), float(gl_VertexID&2)); gl_Po
 function areaFS(srcU, outU) { return `#version 300 es
 precision highp float; precision highp int; precision highp usampler2D;
 ${srcU ? 'uniform usampler2D uSrc;' : 'uniform sampler2D uSrc;'}
-uniform vec2 uScale; uniform float uMul;
+uniform vec2 uScale; uniform float uMul; uniform vec2 uOff;
 out ${outU ? 'uvec4' : 'vec4'} o;
 void main(){ ivec2 sz=textureSize(uSrc,0); vec2 d=floor(gl_FragCoord.xy);
-  vec2 s0=d*uScale, s1=(d+1.)*uScale;
+  vec2 s0=d*uScale+uOff, s1=(d+1.)*uScale+uOff;
   ivec2 a=ivec2(floor(s0)), b=ivec2(ceil(s1)); b=max(b,a+1); b=min(b,sz); a=clamp(a,ivec2(0),sz-1);
   vec4 acc=vec4(0.); float n=0.;
   for(int y=a.y;y<b.y;y++){ float wy=clamp(min(float(y+1),s1.y)-max(float(y),s0.y),0.,1.);
@@ -476,6 +482,8 @@ uniform float uVib, uSat; uniform float uHue[8], uHSat[8], uHLum[8], uGray[8]; u
 uniform vec3 uCgS, uCgM, uCgH, uCgG; uniform vec4 uCgL; uniform float uCgBlend, uCgBal; uniform bool uCgOn;
 uniform float uVigAmt, uVigMid, uVigRound, uVigFeather, uGrainAmt, uGrainSize, uGrainRough;
 uniform bool uClip; uniform float uDither;
+uniform int uMkN; uniform vec4 uMkA[8], uMkB[8], uMkC[8];
+uniform int uHeN; uniform vec4 uHeA[24], uHeB[24], uHeC[24];
 out vec4 o;
 const vec3 LW=vec3(0.2126,0.7152,0.0722);
 float lum(vec3 c){ return dot(c,LW); }
@@ -516,14 +524,38 @@ void main(){
   vec2 su=s/uSrcSize;
   vec3 x=fetchBase(s);
   float bS=max(texture(uBS,su).r,1e-7), b2=max(texture(uB2,su).r,1e-7), bM=max(texture(uBM,su).r,1e-7), bLr=max(texture(uBL,su).r,1e-7);
+  vec3 b3=texture(uB3,su).rgb;
+  /* spot healing: borrow texture from the source spot, matched to the colour around the blemish */
+  if(uHeN>0){ float lgS=max(uSrcSize.x,uSrcSize.y);
+    for(int i=0;i<24;i++){ if(i>=uHeN) break;
+      vec4 HA=uHeA[i], HB=uHeB[i], HC=uHeC[i];
+      float dist=length(s-HA.xy*uSrcSize)/max(HA.z*lgS,1e-3);
+      if(dist<1.){ float w=1.-smoothstep(1.-max(HA.w,0.05),1.,dist);
+        vec2 s2=s+vec2(HB.w,HC.x)*uSrcSize; vec2 su2=s2/uSrcSize; vec3 gn=HB.xyz; float gm=dot(gn,LW);
+        x=mix(x,fetchBase(s2)*gn,w);
+        bS=mix(bS,max(texture(uBS,su2).r,1e-7)*gm,w); b2=mix(b2,max(texture(uB2,su2).r,1e-7)*gm,w); bM=mix(bM,max(texture(uBM,su2).r,1e-7)*gm,w);
+        b3=mix(b3,texture(uB3,su2).rgb*gn,w); } } }
   /* noise reduction */
   float Yr=max(lum(x),1e-7);
   if(uLNR>0.){ float q=log2(Yr/b2); float w=uLNR*exp(-q*q/(0.01+uLNR*0.12)); x*=mix(1.,b2/Yr,w); }
-  if(uCNR>0.){ vec3 b3=texture(uB3,su).rgb; float Y3=max(lum(b3),1e-7); x=mix(x,b3*(max(lum(x),1e-7)/Y3),uCNR); }
+  if(uCNR>0.){ float Y3=max(lum(b3),1e-7); x=mix(x,b3*(max(lum(x),1e-7)/Y3),uCNR); }
   float Lr=log2(max(lum(x),1e-7));
   float dS=clamp(Lr-log2(bS),-1.,1.), d2=clamp(Lr-log2(b2),-2.,2.), dM=clamp(Lr-log2(bM),-3.,3.);
   /* white balance and exposure */
   x=max(uM*x,0.);
+  /* local lights and masks */
+  if(uMkN>0){ float lg=max(uOriSize.x,uOriSize.y); vec3 gain=vec3(1.); float satm=1.;
+    for(int i=0;i<8;i++){ if(i>=uMkN) break;
+      vec4 A=uMkA[i], B=uMkB[i], Cc=uMkC[i];
+      vec2 q=P-A.xy*uOriSize; float cb=cos(B.x), sb=sin(B.x); q=vec2(cb*q.x+sb*q.y, -sb*q.x+cb*q.y);
+      float w;
+      if(B.w<0.5){ float e=length(q/(max(A.zw,vec2(1e-4))*lg)); float f=max(B.y,0.02); w=1.-smoothstep(1.-f,1.,e); }
+      else { float tt=q.y/(max(A.z,1e-4)*lg); w=1.-smoothstep(-1.,1.,tt); }
+      if(B.z>0.5) w=1.-w;
+      float hh=Cc.z; vec3 col=clamp(abs(fract(vec3(hh)+vec3(1.,2./3.,1./3.))*6.-3.)-1.,0.,1.); col/=max(dot(col,LW),1e-3);
+      vec3 g=mix(vec3(1.),col,Cc.w)*exp2(Cc.x);
+      gain*=mix(vec3(1.),g,w); satm*=mix(1.,1.+Cc.y,w); }
+    x*=gain; float ly=lum(x); x=max(mix(vec3(ly),x,satm),0.); }
   float bL=bLr*uGainLum;
   /* dehaze */
   if(uDehaze>0.){ float k=clamp(bL*0.8*uDehaze,0.,0.6); x=max(x-k,0.)/(1.-k); bL=max(bL-k,0.)/(1.-k); }
@@ -630,6 +662,7 @@ function setU(prog, k, v) {
   else if (typeof v === 'number') gl.uniform1f(l, v);
   else if (v.i) { if (v.v.length === 1) gl.uniform1i(l, v.v[0]); else gl.uniform2iv(l, v.v); }
   else if (v.arr) gl.uniform1fv(l, v.arr);
+  else if (v.v4) gl.uniform4fv(l, v.v4);
   else if (v.length === 9) gl.uniformMatrix3fv(l, false, v);
   else if (v.length === 2) gl.uniform2fv(l, v);
   else if (v.length === 3) gl.uniform3fv(l, v);
@@ -752,6 +785,7 @@ function uniformsFor(p, L) {
     uGray: { arr: p.gray.map(v => v/100) }, uBW: !!p.bw, uHslOn: !p.bw && (any(p.hue) || any(p.hsat) || any(p.hlum)),
     uCgS: tintVec(cg.s), uCgM: tintVec(cg.m), uCgH: tintVec(cg.h), uCgG: tintVec(cg.g),
     uCgL: [cg.s.l, cg.m.l, cg.h.l, cg.g.l].map(v => v/100*0.2), uCgBlend: p.cgBlend/100, uCgBal: p.cgBal/100, uCgOn: cgOn,
+    ...maskUniforms(p), ...healUniforms(p),
     uVigAmt: p.vigAmt/100, uVigMid: 0.15 + (1 - p.vigMid/100)*0.7, uVigRound: p.vigRound/100, uVigFeather: 0.05 + p.vigFeather/100*0.8,
     uGrainAmt: p.grainAmt/100*0.1, uGrainSize: Math.max(0.6, (0.8 + p.grainSize/100*3.2)*L.scale), uGrainRough: p.grainRough/100
   };
@@ -887,6 +921,8 @@ function cropScreenRect() {
 function drawOverlay() {
   const ov = $('#overlay'); const d = view.map ? view.map.dpr : (window.devicePixelRatio || 1);
   ovc.setTransform(1,0,0,1,0,0); ovc.clearRect(0, 0, ov.width, ov.height);
+  if (view.masks && view.map && IMG) { ovc.setTransform(d,0,0,d,0,0); drawMasks(); return; }
+  if (view.heal && view.map && IMG) { ovc.setTransform(d,0,0,d,0,0); drawHeal(); return; }
   if (!view.crop || !view.map || !IMG) return;
   ovc.setTransform(d,0,0,d,0,0);
   const { r } = cropScreenRect(); const [x, y, w, h] = r;
@@ -970,7 +1006,7 @@ $('#overlay').addEventListener('pointercancel', endCrop);
 /* ================= zoom and pan ================= */
 let pan = null;
 $('#stage').addEventListener('pointerdown', e => {
-  if (!IMG || view.crop || e.target.id === 'overlay' || e.button !== 0) return;
+  if (!IMG || view.crop || view.masks || view.heal || e.target.id === 'overlay' || e.button !== 0) return;
   if (e.target.closest('.empty')) return;
   pan = { x: e.clientX, y: e.clientY, p: view.pan.slice(), moved: false, id: e.pointerId };
   $('#stage').setPointerCapture(e.pointerId);
@@ -1020,7 +1056,7 @@ function restore(i) {
   hIndex = i; const before = params; params = JSON.parse(history[i]);
   presetCtx = null; refreshAmount();
   if (before.sharpRadius !== params.sharpRadius) {}
-  refreshUI(); refreshLookCard(); requestRender(); updateHistoryButtons(); saveEditSoon();
+  refreshUI(); refreshLookCard(); renderMaskControls(); renderHealControls(); requestRender(); updateHistoryButtons(); saveEditSoon();
 }
 let saveT;
 function saveEditSoon() { clearTimeout(saveT); saveT = setTimeout(() => { if (IMG) { store.set('negative.edit.' + IMG.key, params); const idx = store.get('negative.edits', []).filter(k => k !== IMG.key); idx.unshift(IMG.key); idx.slice(60).forEach(k => store.del('negative.edit.' + k)); store.set('negative.edits', idx.slice(0, 60)); } }, 600); }
@@ -1105,6 +1141,10 @@ function buildPanels() {
   makeSlider(b, { path:'tint', label:'Tint', min:-150, max:150, def: () => IMG ? IMG.asShotTint : 0, onSet: () => { params.wbAsShot = false; },
     grad:'linear-gradient(90deg,#4fae55,#cfd8cf 45%,#dccfdc 55%,#c04fc0)' });
   // Presence
+  b = section('masks', 'Light and masks', false);
+  buildMasksSection(b);
+  b = section('heal', 'Healing', false);
+  buildHealSection(b);
   b = section('presence', 'Presence', true);
   for (const [k, l] of [['texture','Texture'],['clarity','Clarity'],['dehaze','Dehaze'],['vibrance','Vibrance'],['saturation','Saturation']])
     makeSlider(b, { path:k, label:l, min:-100, max:100 });
@@ -1518,7 +1558,7 @@ $('#presetIn').addEventListener('change', e => { const f = [...e.target.files]; 
 $('#btnSavePreset').onclick = () => { const f = $('#saveForm'); f.classList.toggle('on'); if (f.classList.contains('on')) $('#saveName').focus(); };
 const doSave = () => {
   const name = $('#saveName').value.trim(); if (!name) { $('#saveName').focus(); return; }
-  const pp = clone(params); for (const k of GEOM_KEYS) delete pp[k]; delete pp.look;
+  const pp = clone(params); for (const k of GEOM_KEYS) delete pp[k]; delete pp.look; delete pp.masks; delete pp.heal;
   if (pp.wbAsShot) { delete pp.temp; delete pp.tint; }
   presets.push({ id: Date.now().toString(36), name, group: 'My presets', params: pp, skipped: [] });
   presets.sort((a, b) => (a.group || '').localeCompare(b.group || '') || a.name.localeCompare(b.name));
@@ -1576,11 +1616,11 @@ async function openPhoto(file) {
     $('#fname').textContent = file.name; $('#fname').classList.remove('muted');
     const m = IMG.meta;
     $('#exif').innerHTML = m ? [m.model, m.iso ? `ISO ${m.iso}` : '', fmtShutter(m.shutter), m.ap ? `f/${+m.ap.toFixed(1)}` : '', m.focal ? `${Math.round(m.focal)} mm` : ''].filter(Boolean).map(s => `<span>${escapeHtml(s)}</span>`).join('') : `<span>${res.w} × ${res.h}</span>`;
-    for (const id of ['btnBefore','btnCrop','btnZoom','btnClip','btnReset','btnExport','btnSavePreset']) $('#' + id).disabled = false;
+    for (const id of ['btnBefore','btnCrop','btnMasks','btnHeal','btnZoom','btnClip','btnReset','btnExport','btnSavePreset']) $('#' + id).disabled = false;
     refreshUI(); setZoom(false); setCrop(false);
     busy(false);
     requestRender();
-    refreshLookCard(); renderLookThumbs();
+    selMask = -1; selHeal = -1; setMasks(false); setHeal(false); renderMaskControls(); renderHealControls(); refreshLookCard(); renderLookThumbs();
     if (saved) toast('Restored your last edit of this photo. Use Reset to start over.');
     setTimeout(() => ensureFull(), 400);
   } catch (e) {
@@ -1617,6 +1657,8 @@ document.addEventListener('drop', e => {
 
 /* ================= tools ================= */
 function setCrop(on) {
+  if (on && view.masks) setMasks(false);
+  if (on && view.heal) setHeal(false);
   view.crop = on; $('#btnCrop').setAttribute('aria-pressed', on); $('#stage').classList.toggle('cropping', on);
   if (on && view.mode === 'zoom') setZoom(false);
   const sec = $('#sec_crop'); if (sec && sec.open !== on) sec.open = on;
@@ -1629,7 +1671,7 @@ const setBefore = on => { if (!IMG) return; view.before = on; $('#btnBefore').se
 $('#btnBefore').onclick = () => setBefore(!view.before);
 $('#btnUndo').onclick = () => { if (hIndex > 0) restore(hIndex - 1); };
 $('#btnRedo').onclick = () => { if (hIndex < history.length - 1) restore(hIndex + 1); };
-$('#btnReset').onclick = () => { if (!IMG) return; params = defaultParams(IMG); presetCtx = null; activePresetId = null; refreshAmount(); renderPresets(); refreshUI(); refreshLookCard(); requestRender(); commit(); toast('Reset to the original. Undo brings your edit back.'); };
+$('#btnReset').onclick = () => { if (!IMG) return; params = defaultParams(IMG); presetCtx = null; activePresetId = null; refreshAmount(); renderPresets(); selMask = -1; selHeal = -1; refreshUI(); refreshLookCard(); renderMaskControls(); renderHealControls(); requestRender(); commit(); toast('Reset to the original. Undo brings your edit back.'); };
 $('#tabPresets').onclick = () => { $('#app').dataset.tab = 'presets'; $('#tabPresets').setAttribute('aria-pressed', 'true'); $('#tabAdjust').setAttribute('aria-pressed', 'false'); };
 $('#tabAdjust').onclick = () => { $('#app').dataset.tab = 'adjust'; $('#tabAdjust').setAttribute('aria-pressed', 'true'); $('#tabPresets').setAttribute('aria-pressed', 'false'); };
 document.addEventListener('keydown', e => {
@@ -1642,6 +1684,13 @@ document.addEventListener('keydown', e => {
   if (e.key === '\\') { setBefore(!view.before); }
   else if (e.key.toLowerCase() === 'z') setZoom(view.mode !== 'zoom');
   else if (e.key.toLowerCase() === 'c') setCrop(!view.crop);
+  else if (e.key.toLowerCase() === 'm') setMasks(!view.masks);
+  else if (e.key.toLowerCase() === 'h') setHeal(!view.heal);
+  else if (view.heal && (e.key === '[' || e.key === ']')) healSize(e.key === ']' ? 1.15 : 1/1.15);
+  else if (view.heal && (e.key === 'Delete' || e.key === 'Backspace') && selHeal >= 0) deleteHeal(selHeal);
+  else if (e.key === 'Escape' && view.heal) setHeal(false);
+  else if ((e.key === 'Delete' || e.key === 'Backspace') && view.masks && selMask >= 0) deleteMask(selMask);
+  else if (e.key === 'Escape' && view.masks) setMasks(false);
   else if (e.key.toLowerCase() === 'j') $('#btnClip').click();
   else if (e.key === 'Escape' && view.crop) setCrop(false);
   else if (e.key === 'Enter' && view.crop) setCrop(false);
@@ -1784,6 +1833,382 @@ async function encodePNG16(W, H, rows, progress) {
   return new Blob(parts, { type: 'image/png' });
 }
 
+
+
+/* ================= lights and masks ================= */
+let selMask = -1, maskBox = null;
+const MASK_KINDS = {
+  light:  { name:'Light', make: () => ({ type:'radial', x:0.5, y:0.4, rx:0.16, ry:0.16, a:0, f:85, inv:false, exp:0.8, sat:0, hue:35, camt:25 }) },
+  dark:   { name:'Background', make: () => ({ type:'radial', x:0.5, y:0.45, rx:0.2, ry:0.3, a:0, f:70, inv:true, exp:-1.4, sat:-25, hue:210, camt:0 }) },
+  grad:   { name:'Gradient', make: () => ({ type:'linear', x:0.5, y:0.35, rx:0.12, ry:0.12, a:0, f:100, inv:false, exp:-0.8, sat:0, hue:210, camt:0 }) }
+};
+function maskUniforms(p) {
+  const ms = (p.masks || []).slice(0, 8);
+  const A = new Float32Array(32), B = new Float32Array(32), C = new Float32Array(32);
+  ms.forEach((m, i) => {
+    A.set([m.x, m.y, m.rx, m.ry], i*4);
+    B.set([m.a*Math.PI/180, m.f/100, m.inv ? 1 : 0, m.type === 'linear' ? 1 : 0], i*4);
+    C.set([m.exp, m.sat/100, ((m.hue % 360) + 360) % 360 / 360, m.camt/100], i*4);
+  });
+  return { uMkN: I(ms.length), uMkA: { v4: A }, uMkB: { v4: B }, uMkC: { v4: C } };
+}
+function setMasks(on) {
+  if (on && !IMG) return;
+  if (on && view.crop) setCrop(false);
+  if (on && view.heal) setHeal(false);
+  view.masks = on; $('#btnMasks').setAttribute('aria-pressed', on); $('#stage').classList.toggle('masking', on);
+  const sec = $('#sec_masks'); if (sec && sec.open !== on && on) sec.open = true;
+  if (on && selMask < 0 && params.masks.length) selMask = 0;
+  requestRender();
+}
+function addMask(kind) {
+  if (!IMG) return;
+  if (params.masks.length >= 8) { toast('You can have up to eight lights and masks. Delete one to add another.'); return; }
+  const n = params.masks.filter(m => m.kind === kind).length + 1;
+  const m = Object.assign(MASK_KINDS[kind].make(), { kind, name: `${MASK_KINDS[kind].name} ${n}` });
+  params.masks.push(m); selMask = params.masks.length - 1;
+  setMasks(true); renderMaskControls(); requestRender(); commit();
+}
+function deleteMask(i) {
+  params.masks.splice(i, 1); selMask = Math.min(i, params.masks.length - 1);
+  renderMaskControls(); requestRender(); commit();
+}
+function buildMasksSection(b) {
+  const r = document.createElement('div'); r.className = 'mrow';
+  r.innerHTML = '<button class="btn small" data-k="light">Add light</button><button class="btn small" data-k="dark">Darken background</button><button class="btn small" data-k="grad">Gradient</button>';
+  r.addEventListener('click', e => { const bt = e.target.closest('button'); if (bt) addMask(bt.dataset.k); });
+  b.appendChild(r);
+  maskBox = document.createElement('div'); b.appendChild(maskBox);
+  $('#sec_masks').addEventListener('toggle', () => { if (IMG && !$('#sec_masks').open && view.masks) setMasks(false); else if (IMG && $('#sec_masks').open && !view.masks && params.masks.length) setMasks(true); });
+  renderMaskControls();
+}
+function renderMaskControls() {
+  if (!maskBox) return;
+  for (let i = controls.length - 1; i >= 0; i--) if (maskBox.contains(controls[i].row)) controls.splice(i, 1);
+  maskBox.innerHTML = '';
+  const ms = params.masks || [];
+  if (!ms.length) { const p = document.createElement('p'); p.className = 'note'; p.textContent = 'Add a light to brighten a face or create a glow, darken the background for a low-key portrait, or use a gradient on a sky or floor.'; maskBox.appendChild(p); return; }
+  if (selMask >= ms.length) selMask = ms.length - 1;
+  if (selMask < 0) selMask = 0;
+  const list = document.createElement('div'); list.className = 'mrow';
+  ms.forEach((m, i) => { const bt = document.createElement('button'); bt.className = 'btn small'; bt.textContent = m.name; bt.setAttribute('aria-pressed', String(i === selMask));
+    bt.onclick = () => { selMask = i; setMasks(true); renderMaskControls(); }; list.appendChild(bt); });
+  maskBox.appendChild(list);
+  const m = ms[selMask], i = selMask;
+  makeSlider(maskBox, { path:`masks.${i}.exp`, label:'Exposure', min:-4, max:4, step:0.01, dp:2, def:0 });
+  makeSlider(maskBox, { path:`masks.${i}.hue`, label:'Colour', min:0, max:359, fmt: v => Math.round(v) + '°', def: m.hue,
+    grad:'linear-gradient(90deg,hsl(0,80%,55%),hsl(60,80%,55%),hsl(120,80%,55%),hsl(180,80%,55%),hsl(240,80%,55%),hsl(300,80%,55%),hsl(360,80%,55%))' });
+  makeSlider(maskBox, { path:`masks.${i}.camt`, label:'Colour mix', min:0, max:100, def:0 });
+  makeSlider(maskBox, { path:`masks.${i}.sat`, label:'Saturation', min:-100, max:100, def:0 });
+  makeSlider(maskBox, { path:`masks.${i}.f`, label: m.type === 'linear' ? 'Softness' : 'Feather', min:0, max:100, def: m.type === 'linear' ? 100 : 70 });
+  const row = document.createElement('div'); row.className = 'row'; row.style.marginTop = '6px';
+  row.innerHTML = `<label class="chk" style="margin:0"><input type="checkbox" ${m.inv ? 'checked' : ''}> Invert</label><span style="flex:1"></span><button class="btn small">Delete</button>`;
+  row.querySelector('input').onchange = e => { m.inv = e.target.checked; requestRender(); commit(); };
+  row.querySelector('button').onclick = () => deleteMask(i);
+  maskBox.appendChild(row);
+  const n = document.createElement('p'); n.className = 'note';
+  n.textContent = m.type === 'linear' ? 'Drag the line to move it. Drag the round handle to rotate it and set the transition width.' : 'Drag the shape on the photo to move it. Drag the square handles to resize and the round handle to rotate.';
+  maskBox.appendChild(n);
+  syncAll();
+}
+/* coordinate helpers: mask space is the oriented, uncropped frame (0 to 1) */
+function mapInfo() {
+  const m = view.map; if (!m) return null;
+  const crop = view.crop ? { x:0, y:0, w:1, h:1 } : params.crop;
+  const d = m.dpr, vp = m.vp.map(v => v/d);
+  const ou = m.out1[0] - m.out0[0], ov = m.out1[1] - m.out0[1];
+  const k = vp[2] / (ou*crop.w*m.Wf); // css px per oriented full-res px
+  return { crop, vp, ou, ov, k, Wf: m.Wf, Hf: m.Hf, lg: Math.max(m.Wf, m.Hf), m };
+}
+function ocToScreen(x, y, M) {
+  const u = (x - M.crop.x)/M.crop.w, v = (y - M.crop.y)/M.crop.h;
+  return [M.vp[0] + (u - M.m.out0[0])/M.ou*M.vp[2], M.vp[1] + (v - M.m.out0[1])/M.ov*M.vp[3]];
+}
+function screenToOc(sx, sy, M) {
+  const u = M.m.out0[0] + (sx - M.vp[0])/M.vp[2]*M.ou, v = M.m.out0[1] + (sy - M.vp[1])/M.vp[3]*M.ov;
+  return [M.crop.x + u*M.crop.w, M.crop.y + v*M.crop.h];
+}
+function maskHandles(m, M) {
+  const [cx, cy] = ocToScreen(m.x, m.y, M); const a = m.a*Math.PI/180, ca = Math.cos(a), sa = Math.sin(a);
+  const R = (dx, dy) => [cx + ca*dx - sa*dy, cy + sa*dx + ca*dy];
+  const rx = m.rx*M.lg*M.k, ry = m.ry*M.lg*M.k;
+  if (m.type === 'linear') return { c:[cx, cy], rx, ry, R, rot: R(0, -rx - 18), w1: R(0, -rx), w2: R(0, rx) };
+  return { c:[cx, cy], rx, ry, R, hx: R(rx, 0), hy: R(0, ry), rot: R(0, -ry - 22) };
+}
+function drawMasks() {
+  const M = mapInfo(); if (!M) return;
+  const ms = params.masks || [];
+  ms.forEach((m, i) => {
+    const H = maskHandles(m, M); const sel = i === selMask;
+    ovc.lineWidth = sel ? 1.5 : 1;
+    const stroke = (fn) => { ovc.strokeStyle = 'rgba(0,0,0,.55)'; ovc.lineWidth = sel ? 3.5 : 2.5; fn(); ovc.stroke(); ovc.strokeStyle = sel ? '#fff' : 'rgba(255,255,255,.7)'; ovc.lineWidth = sel ? 1.5 : 1; fn(); ovc.stroke(); };
+    if (sel) {
+      if (m.type === 'linear') {
+        const L = 4000;
+        stroke(() => { ovc.beginPath(); const p1 = H.R(-L, 0), p2 = H.R(L, 0); ovc.moveTo(...p1); ovc.lineTo(...p2); });
+        ovc.setLineDash([5, 5]);
+        stroke(() => { ovc.beginPath(); ovc.moveTo(...H.R(-L, -H.rx)); ovc.lineTo(...H.R(L, -H.rx)); ovc.moveTo(...H.R(-L, H.rx)); ovc.lineTo(...H.R(L, H.rx)); });
+        ovc.setLineDash([]);
+        stroke(() => { ovc.beginPath(); ovc.moveTo(...H.c); ovc.lineTo(...H.rot); });
+      } else {
+        stroke(() => { ovc.beginPath(); ovc.ellipse(H.c[0], H.c[1], Math.max(1, H.rx), Math.max(1, H.ry), m.a*Math.PI/180, 0, Math.PI*2); });
+        const f = Math.max(0.02, m.f/100);
+        ovc.setLineDash([4, 5]);
+        stroke(() => { ovc.beginPath(); ovc.ellipse(H.c[0], H.c[1], Math.max(1, H.rx*(1-f)), Math.max(1, H.ry*(1-f)), m.a*Math.PI/180, 0, Math.PI*2); });
+        ovc.setLineDash([]);
+        stroke(() => { ovc.beginPath(); ovc.moveTo(...H.R(0, -H.ry)); ovc.lineTo(...H.rot); });
+        for (const h of [H.hx, H.hy]) { ovc.fillStyle = '#fff'; ovc.strokeStyle = 'rgba(0,0,0,.6)'; ovc.lineWidth = 1; ovc.fillRect(h[0]-5, h[1]-5, 10, 10); ovc.strokeRect(h[0]-5, h[1]-5, 10, 10); }
+      }
+      ovc.fillStyle = '#fff'; ovc.strokeStyle = 'rgba(0,0,0,.6)'; ovc.lineWidth = 1;
+      ovc.beginPath(); ovc.arc(H.rot[0], H.rot[1], 6, 0, Math.PI*2); ovc.fill(); ovc.stroke();
+    }
+    ovc.beginPath(); ovc.arc(H.c[0], H.c[1], sel ? 7 : 6, 0, Math.PI*2);
+    ovc.fillStyle = sel ? getComputedStyle(document.documentElement).getPropertyValue('--accent') : '#fff'; ovc.fill();
+    ovc.strokeStyle = 'rgba(0,0,0,.6)'; ovc.lineWidth = 1.5; ovc.stroke();
+  });
+}
+let mDrag = null;
+const ovEl = $('#overlay');
+ovEl.addEventListener('pointerdown', e => {
+  if (!view.masks) return;
+  const M = mapInfo(); if (!M) return;
+  const b = ovEl.getBoundingClientRect(); const x = e.clientX - b.left, y = e.clientY - b.top;
+  const ms = params.masks; let hit = null;
+  const near = (p, r = 11) => p && Math.hypot(x - p[0], y - p[1]) < r;
+  if (selMask >= 0 && ms[selMask]) {
+    const H = maskHandles(ms[selMask], M);
+    if (near(H.rot)) hit = { i: selMask, mode: 'rot' };
+    else if (near(H.hx)) hit = { i: selMask, mode: 'rx' };
+    else if (near(H.hy)) hit = { i: selMask, mode: 'ry' };
+  }
+  if (!hit) ms.forEach((m, i) => { if (!hit && near(maskHandles(m, M).c, 13)) hit = { i, mode: 'move' }; });
+  if (!hit && selMask >= 0 && ms[selMask]) {
+    const m = ms[selMask], H = maskHandles(m, M); const a = -m.a*Math.PI/180;
+    const dx = x - H.c[0], dy = y - H.c[1]; const qx = Math.cos(a)*dx - Math.sin(a)*dy, qy = Math.sin(a)*dx + Math.cos(a)*dy;
+    const inside = m.type === 'linear' ? Math.abs(qy) < Math.max(12, H.rx) : (qx*qx)/(H.rx*H.rx) + (qy*qy)/(H.ry*H.ry) <= 1;
+    if (inside) hit = { i: selMask, mode: 'move' };
+  }
+  if (!hit) return;
+  if (hit.i !== selMask) { selMask = hit.i; renderMaskControls(); }
+  const m = ms[hit.i]; const [ox, oy] = screenToOc(x, y, M);
+  mDrag = { ...hit, start: clone(m), ox, oy, M };
+  ovEl.setPointerCapture(e.pointerId); requestRender();
+});
+ovEl.addEventListener('pointermove', e => {
+  if (!view.masks) return;
+  const b = ovEl.getBoundingClientRect(); const x = e.clientX - b.left, y = e.clientY - b.top;
+  if (!mDrag) {
+    const M = mapInfo(); if (!M) return; let cur = 'default';
+    if (selMask >= 0 && params.masks[selMask]) { const H = maskHandles(params.masks[selMask], M);
+      if ([H.rot].some(p => p && Math.hypot(x-p[0], y-p[1]) < 11)) cur = 'grab';
+      else if ([H.hx, H.hy].some(p => p && Math.hypot(x-p[0], y-p[1]) < 11)) cur = 'nwse-resize'; }
+    if (cur === 'default' && params.masks.some(m => { const c = maskHandles(m, M).c; return Math.hypot(x-c[0], y-c[1]) < 13; })) cur = 'move';
+    ovEl.style.cursor = cur; return;
+  }
+  const { M, start, mode } = mDrag; const m = params.masks[mDrag.i];
+  const [px, py] = screenToOc(x, y, M);
+  const toPx = (u, v) => [(u - start.x)*M.Wf, (v - start.y)*M.Hf]; // oriented full-res px from centre
+  if (mode === 'move') { m.x = clamp(start.x + px - mDrag.ox, -0.5, 1.5); m.y = clamp(start.y + py - mDrag.oy, -0.5, 1.5); }
+  else {
+    const [dx, dy] = toPx(px, py); const a = start.a*Math.PI/180;
+    const qx = Math.cos(a)*dx + Math.sin(a)*dy, qy = -Math.sin(a)*dx + Math.cos(a)*dy;
+    if (mode === 'rx') m.rx = clamp(Math.abs(qx)/M.lg, 0.01, 2);
+    else if (mode === 'ry') m.ry = clamp(Math.abs(qy)/M.lg, 0.01, 2);
+    else if (mode === 'rot') {
+      m.a = Math.round(Math.atan2(dx, -dy)*180/Math.PI*10)/10;
+      if (m.type === 'linear') m.rx = clamp(Math.hypot(dx, dy)/M.lg - 18/M.k/M.lg, 0.005, 2);
+    }
+  }
+  requestRender();
+});
+const endM = () => { if (mDrag) { mDrag = null; commit(); } };
+ovEl.addEventListener('pointerup', endM); ovEl.addEventListener('pointercancel', endM);
+$('#btnMasks').onclick = () => setMasks(!view.masks);
+
+
+/* ================= spot healing ================= */
+let selHeal = -1, healBox = null, healR = 0.012; // radius as a fraction of the photo's long edge
+function healUniforms(p) {
+  const hs = (p.heal || []).slice(0, 24);
+  const A = new Float32Array(96), B = new Float32Array(96), C = new Float32Array(96);
+  hs.forEach((h, i) => { A.set([h.x, h.y, h.r, h.f/100], i*4); B.set([h.g[0], h.g[1], h.g[2], h.ox], i*4); C.set([h.oy, 0, 0, 0], i*4); });
+  return { uHeN: I(hs.length), uHeA: { v4: A }, uHeB: { v4: B }, uHeC: { v4: C } };
+}
+/* source pixel coordinates <-> mask/crop space */
+function srcToOri(sx, sy) {
+  const [Wf] = oriDims(params, SRC.w, SRC.h); let q;
+  const o = params.orient;
+  if (o === 1) q = [SRC.h - sy, sx]; else if (o === 2) q = [SRC.w - sx, SRC.h - sy]; else if (o === 3) q = [sy, SRC.w - sx]; else q = [sx, sy];
+  if (params.flipH) q[0] = Wf - q[0];
+  return q;
+}
+function oriToSrc(qx, qy) {
+  const [Wf] = oriDims(params, SRC.w, SRC.h); if (params.flipH) qx = Wf - qx;
+  const o = params.orient;
+  if (o === 1) return [qy, SRC.h - qx]; if (o === 2) return [SRC.w - qx, SRC.h - qy]; if (o === 3) return [SRC.w - qy, qx]; return [qx, qy];
+}
+function srcToOc(sx, sy) {
+  const [Wf, Hf] = oriDims(params, SRC.w, SRC.h); const [qx, qy] = srcToOri(sx, sy);
+  const a = params.angle*Math.PI/180, ca = Math.cos(a), sa = Math.sin(a); const ex = qx - Wf/2, ey = qy - Hf/2;
+  return [(Wf/2 + ca*ex - sa*ey)/Wf, (Hf/2 + sa*ex + ca*ey)/Hf];
+}
+function ocToSrc(u, v) {
+  const [Wf, Hf] = oriDims(params, SRC.w, SRC.h); const a = params.angle*Math.PI/180, ca = Math.cos(a), sa = Math.sin(a);
+  const dx = u*Wf - Wf/2, dy = v*Hf - Hf/2;
+  return oriToSrc(Wf/2 + ca*dx + sa*dy, Hf/2 - sa*dx + ca*dy);
+}
+const srcLong = () => Math.max(SRC.w, SRC.h);
+/* read a square of the full-resolution photo around (cx, cy), at most ~420 px across */
+function readRegion(cx, cy, half) {
+  const sc = Math.max(1, (2*half)/420); const n = Math.max(8, Math.ceil(2*half/sc));
+  const t = newTex(n, n, 'RGBA32F', false);
+  pass(PR.areaUF, t, { uScale: [sc, sc], uMul: 1/65535, uOff: [cx - half, cy - half] }, [['uSrc', SRC.tex]]);
+  const px = new Float32Array(n*n*4); gl.readPixels(0, 0, n, n, gl.RGBA, gl.FLOAT, px); delTex(t);
+  return { px, n, sc, x0: cx - half, y0: cy - half,
+    at(x, y) { const i = Math.round((x - this.x0)/this.sc - 0.5), j = Math.round((y - this.y0)/this.sc - 0.5);
+      if (i < 0 || j < 0 || i >= n || j >= n || x < 0 || y < 0 || x >= SRC.w || y >= SRC.h) return null; const k = (j*n + i)*4; return [px[k], px[k+1], px[k+2]]; } };
+}
+function ringSamples(reg, cx, cy, r, rad0, rad1, count) {
+  const out = [];
+  for (let i = 0; i < count; i++) { const a = i/count*Math.PI*2 + (i % 2)*0.2; const rr = r*(rad0 + (rad1 - rad0)*((i*7) % count)/count);
+    out.push(reg.at(cx + Math.cos(a)*rr, cy + Math.sin(a)*rr)); }
+  return out;
+}
+const meanOf = s => { const m = [0,0,0]; let n = 0; for (const v of s) if (v) { m[0] += v[0]; m[1] += v[1]; m[2] += v[2]; n++; } return n ? m.map(x => x/n) : null; };
+/* find a clean source patch near the blemish and the colour gain that blends it in */
+function analyseHeal(h, findSource) {
+  const L = srcLong(); const cx = h.x*SRC.w, cy = h.y*SRC.h, r = Math.max(1.5, h.r*L);
+  const reach = findSource ? 4.6*r : Math.hypot(h.ox*SRC.w, h.oy*SRC.h) + 1.6*r;
+  const reg = readRegion(cx, cy, Math.ceil(reach + 3));
+  const dRing = ringSamples(reg, cx, cy, r, 1.1, 1.4, 40); const dMean = meanOf(dRing);
+  if (!dMean) return false;
+  const lg = v => v ? [Math.log(v[0] + 1e-4), Math.log(v[1] + 1e-4), Math.log(v[2] + 1e-4)] : null;
+  if (findSource) {
+    let best = null;
+    const dl = dRing.map(lg);
+    for (const dist of [2.3, 3.1]) for (let k = 0; k < 16; k++) {
+      const a = k/16*Math.PI*2, sx = cx + Math.cos(a)*dist*r, sy = cy + Math.sin(a)*dist*r;
+      if (sx - r < 0 || sy - r < 0 || sx + r >= SRC.w || sy + r >= SRC.h) continue;
+      const ring = ringSamples(reg, sx, sy, r, 1.1, 1.4, 40), inner = ringSamples(reg, sx, sy, r, 0.0, 0.95, 40);
+      const sm = meanOf(ring); if (!sm) continue;
+      const shift = [0,1,2].map(c => Math.log(dMean[c] + 1e-4) - Math.log(sm[c] + 1e-4));
+      let cost = 0, n = 0;
+      ring.forEach((v, i) => { const l = lg(v); if (!l || !dl[i]) return; for (let c = 0; c < 3; c++) { const e = l[c] + shift[c] - dl[i][c]; cost += e*e; } n++; });
+      cost /= Math.max(n, 1);
+      const sml = lg(sm); let iv = 0, m = 0;
+      inner.forEach(v => { const l = lg(v); if (!l) return; for (let c = 0; c < 3; c++) { const e = l[c] - sml[c]; iv += e*e; } m++; });
+      cost += 1.5*iv/Math.max(m, 1) + 0.02*Math.abs(shift[0] + shift[1] + shift[2]) + (dist > 3 ? 0.002 : 0);
+      if (!best || cost < best.cost) best = { cost, ox: (sx - cx)/SRC.w, oy: (sy - cy)/SRC.h };
+    }
+    if (!best) { h.ox = 2.5*r/SRC.w; h.oy = 0; } else { h.ox = best.ox; h.oy = best.oy; }
+  }
+  const sMean = meanOf(ringSamples(reg, cx + h.ox*SRC.w, cy + h.oy*SRC.h, r, 1.1, 1.4, 40));
+  h.g = sMean ? [0,1,2].map(c => Math.round(clamp(dMean[c]/Math.max(sMean[c], 1e-5), 0.4, 2.5)*1e4)/1e4) : [1,1,1];
+  return true;
+}
+function addHealAt(sx, sy) {
+  if (!IMG) return;
+  if (params.heal.length >= 24) { toast('You can have up to 24 healing spots. Delete one to add another.'); return; }
+  const h = { x: sx/SRC.w, y: sy/SRC.h, r: healR, f: 55, ox: 0, oy: 0, g: [1,1,1] };
+  analyseHeal(h, true);
+  params.heal.push(h); selHeal = params.heal.length - 1;
+  renderHealControls(); requestRender(); commit();
+}
+function deleteHeal(i) { params.heal.splice(i, 1); selHeal = Math.min(i, params.heal.length - 1); renderHealControls(); requestRender(); commit(); }
+function healSize(f) {
+  healR = clamp(healR*f, 0.002, 0.08);
+  if (selHeal >= 0 && params.heal[selHeal]) { params.heal[selHeal].r = healR; analyseHeal(params.heal[selHeal], false); requestRender(); commit(); }
+  renderHealControls(); requestRender();
+}
+function setHeal(on) {
+  if (on && !IMG) return;
+  if (on && view.crop) setCrop(false);
+  if (on && view.masks) setMasks(false);
+  view.heal = on; $('#btnHeal').setAttribute('aria-pressed', on); $('#stage').classList.toggle('masking', on || !!view.masks);
+  const sec = $('#sec_heal'); if (sec && on && !sec.open) sec.open = true;
+  if (on) toast('Click a blemish to heal it. Zoom to 100% (Z) for small spots. [ and ] change the size.', 4200);
+  requestRender();
+}
+function buildHealSection(b) {
+  healBox = document.createElement('div'); b.appendChild(healBox);
+  $('#sec_heal').addEventListener('toggle', () => { if (IMG && !$('#sec_heal').open && view.heal) setHeal(false); });
+  renderHealControls();
+}
+function renderHealControls() {
+  if (!healBox) return;
+  healBox.innerHTML = '';
+  const hs = params.heal || [];
+  const row = document.createElement('div'); row.className = 'mrow';
+  row.innerHTML = `<button class="btn small" id="healToggle" aria-pressed="${!!view.heal}">${view.heal ? 'Healing on' : 'Start healing'}</button><button class="btn small" id="healSm">Smaller</button><button class="btn small" id="healLg">Larger</button>`;
+  healBox.appendChild(row);
+  row.querySelector('#healToggle').onclick = () => { setHeal(!view.heal); renderHealControls(); };
+  row.querySelector('#healSm').onclick = () => healSize(1/1.2); row.querySelector('#healLg').onclick = () => healSize(1.2);
+  const p = document.createElement('p'); p.className = 'note';
+  p.textContent = hs.length
+    ? `${hs.length} spot${hs.length === 1 ? '' : 's'} healed. Drag the dashed circle to choose a different source. Select a spot and press Delete to remove it.`
+    : 'Click a blemish, a stray hair or a dust spot. The app picks matching skin nearby and blends it in.';
+  healBox.appendChild(p);
+  if (hs.length) {
+    const r2 = document.createElement('div'); r2.className = 'row';
+    r2.innerHTML = `<label class="chk" style="margin:0">Edge softness <input type="range" min="10" max="100" value="${hs[Math.max(0, selHeal)] ? hs[Math.max(0, selHeal)].f : 55}" style="width:110px"></label><span style="flex:1"></span><button class="btn small">Remove all</button>`;
+    const rg = r2.querySelector('input');
+    rg.oninput = () => { const h = hs[Math.max(0, selHeal)]; if (h) { h.f = +rg.value; requestRender(); } };
+    rg.onchange = commit;
+    r2.querySelector('button').onclick = () => { params.heal = []; selHeal = -1; renderHealControls(); requestRender(); commit(); };
+    healBox.appendChild(r2);
+  }
+}
+function drawHeal() {
+  const M = mapInfo(); if (!M) return;
+  const hs = params.heal || []; const L = srcLong();
+  hs.forEach((h, i) => {
+    const sel = i === selHeal;
+    const d = ocToScreen(...srcToOc(h.x*SRC.w, h.y*SRC.h), M), s = ocToScreen(...srcToOc((h.x + h.ox)*SRC.w, (h.y + h.oy)*SRC.h), M);
+    const r = Math.max(4, h.r*L*M.k);
+    const ring = (c, dash, w) => { ovc.setLineDash(dash); ovc.strokeStyle = 'rgba(0,0,0,.55)'; ovc.lineWidth = w + 2; ovc.beginPath(); ovc.arc(c[0], c[1], r, 0, Math.PI*2); ovc.stroke();
+      ovc.strokeStyle = '#fff'; ovc.lineWidth = w; ovc.beginPath(); ovc.arc(c[0], c[1], r, 0, Math.PI*2); ovc.stroke(); ovc.setLineDash([]); };
+    if (sel) {
+      ovc.strokeStyle = 'rgba(255,255,255,.6)'; ovc.lineWidth = 1; ovc.beginPath();
+      const ang = Math.atan2(s[1] - d[1], s[0] - d[0]); ovc.moveTo(d[0] + Math.cos(ang)*r, d[1] + Math.sin(ang)*r); ovc.lineTo(s[0] - Math.cos(ang)*r, s[1] - Math.sin(ang)*r); ovc.stroke();
+      ring(s, [4, 4], 1.2);
+    }
+    ring(d, [], sel ? 1.8 : 1);
+  });
+  // brush preview at pointer
+  if (healHover) { const r = Math.max(4, healR*L*M.k); ovc.strokeStyle = 'rgba(255,255,255,.8)'; ovc.lineWidth = 1; ovc.setLineDash([2, 3]); ovc.beginPath(); ovc.arc(healHover[0], healHover[1], r, 0, Math.PI*2); ovc.stroke(); ovc.setLineDash([]); }
+}
+let hDrag = null, healHover = null;
+ovEl.addEventListener('pointerdown', e => {
+  if (!view.heal) return;
+  const M = mapInfo(); if (!M) return;
+  const b = ovEl.getBoundingClientRect(); const x = e.clientX - b.left, y = e.clientY - b.top; const L = srcLong();
+  const hs = params.heal; let hit = null;
+  hs.forEach((h, i) => {
+    const r = Math.max(6, h.r*L*M.k);
+    const d = ocToScreen(...srcToOc(h.x*SRC.w, h.y*SRC.h), M), s = ocToScreen(...srcToOc((h.x + h.ox)*SRC.w, (h.y + h.oy)*SRC.h), M);
+    if (i === selHeal && Math.hypot(x - s[0], y - s[1]) < r) hit = { i, mode: 'src' };
+    else if (!hit && Math.hypot(x - d[0], y - d[1]) < r) hit = { i, mode: 'dst' };
+  });
+  if (!hit) { const [u, v] = screenToOc(x, y, M); const [sx, sy] = ocToSrc(u, v); if (sx >= 0 && sy >= 0 && sx < SRC.w && sy < SRC.h) addHealAt(sx, sy); return; }
+  if (hit.i !== selHeal) { selHeal = hit.i; healR = hs[hit.i].r; renderHealControls(); }
+  hDrag = { ...hit, M, start: clone(hs[hit.i]), sx: x, sy: y, moved: false };
+  ovEl.setPointerCapture(e.pointerId); requestRender();
+});
+ovEl.addEventListener('pointermove', e => {
+  if (!view.heal) return;
+  const b = ovEl.getBoundingClientRect(); const x = e.clientX - b.left, y = e.clientY - b.top;
+  if (!hDrag) { healHover = [x, y]; ovEl.style.cursor = 'crosshair'; requestRender(); return; }
+  const { M, start } = hDrag; const h = params.heal[hDrag.i]; hDrag.moved = true;
+  const [u0, v0] = screenToOc(hDrag.sx, hDrag.sy, M), [u1, v1] = screenToOc(x, y, M);
+  const p0 = ocToSrc(u0, v0), p1 = ocToSrc(u1, v1); const dx = (p1[0] - p0[0])/SRC.w, dy = (p1[1] - p0[1])/SRC.h;
+  if (hDrag.mode === 'src') { h.ox = start.ox + dx; h.oy = start.oy + dy; }
+  else { h.x = start.x + dx; h.y = start.y + dy; }
+  requestRender();
+});
+ovEl.addEventListener('pointerleave', () => { if (healHover) { healHover = null; requestRender(); } });
+const endH = () => { if (hDrag) { const h = params.heal[hDrag.i]; if (hDrag.moved) { analyseHeal(h, false); commit(); } hDrag = null; requestRender(); } };
+ovEl.addEventListener('pointerup', endH); ovEl.addEventListener('pointercancel', endH);
+$('#btnHeal').onclick = () => { setHeal(!view.heal); renderHealControls(); };
 
 /* ================= looks ================= */
 const Z = (h, s, l = 0) => ({ h, s, l });
@@ -1936,7 +2361,7 @@ function renderLookThumbs() {
   if (!IMG || !levels.proxy) return;
   $('#lookNote').textContent = 'Pick a look, then fine-tune it with the strength slider or any adjustment on the right.';
   const base = defaultParams(IMG); for (const k of GEOM_KEYS) base[k] = clone(params[k]);
-  base.sharp = 0; base.cnr = params.cnr;
+  base.sharp = 0; base.cnr = params.cnr; base.heal = clone(params.heal || []);
   const [Wf, Hf] = oriDims(base, SRC.w, SRC.h); const ar = (base.crop.w*Wf)/(base.crop.h*Hf);
   const tw = 240, th = Math.max(40, Math.min(320, Math.round(tw/ar)));
   if (!thumbTex || thumbTex.w !== tw || thumbTex.h !== th) { delTex(thumbTex); thumbTex = newTex(tw, th, 'RGBA8', false); }
@@ -1978,7 +2403,7 @@ if (!glOK) {
   $('#btnOpen2').style.display = 'none';
 } else requestRender();
 canvas.addEventListener('webglcontextlost', e => { e.preventDefault(); toast('The graphics context was lost. Reload the page and reopen your photo; your edit is saved.', 9000); });
-window.__neg = { openPhoto, importPresets, get params() { return params; }, set params(v) { params = v; refreshUI(); requestRender(); }, exportImage, render, applyPreset, get presets() { return presets; }, view, setCrop, setZoom, refitCrop, commit, selectLook, LOOKS, get img() { return IMG; } };
+window.__neg = { openPhoto, importPresets, get params() { return params; }, set params(v) { params = v; refreshUI(); requestRender(); }, exportImage, render, applyPreset, get presets() { return presets; }, view, setCrop, setZoom, refitCrop, commit, selectLook, addMask, setMasks, setHeal, addHealAt, LOOKS, get img() { return IMG; } };
 })();
 </script>
 </body>
