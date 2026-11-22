@@ -127,6 +127,25 @@ canvas.wheel{width:150px;height:150px;display:block;margin:4px auto 8px;touch-ac
 .pitem:hover .pdel,.pdel:focus-visible{opacity:1}
 .pdel:hover{color:var(--danger)}
 .pempty{color:var(--muted);padding:6px 6px;line-height:1.5}
+.ltabs{padding:10px 12px 0}
+.ltabs .seg{margin:0}
+.pane{display:none;flex:1;min-height:0;flex-direction:column}
+.pane.on{display:flex}
+#looksPane{overflow-y:auto}
+.lookcard{margin:10px 12px 4px;border:1px solid var(--line);border-radius:8px;padding:8px 10px 8px;display:none}
+.lookcard.on{display:block}
+.lookcard .t{font-size:12px;display:flex;justify-content:space-between;gap:8px;margin-bottom:2px}
+.lookcard .t b{font-weight:600}
+.chk{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--muted);margin-top:6px;cursor:pointer}
+.chk input{accent-color:var(--accent);margin:0}
+.lgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:8px 12px 16px}
+.lk{border:0;padding:0;background:none;text-align:left;border-radius:8px;cursor:pointer}
+.lk canvas{width:100%;aspect-ratio:var(--ar,3/2);display:block;border-radius:6px;background:var(--surface2);outline:2px solid transparent;outline-offset:1px}
+.lk span{display:block;font-size:12px;padding:4px 2px 0;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lk[aria-pressed="true"] canvas{outline-color:var(--accent)}
+.lk[aria-pressed="true"] span{color:var(--text);font-weight:600}
+.lk:hover span{color:var(--text)}
+.lnote{font-size:12px;color:var(--muted);padding:0 12px 4px;line-height:1.45}
 .amount{border:1px solid var(--line);border-radius:8px;padding:8px 10px 6px;display:none}
 .amount.on{display:block}
 .amount .t{font-size:12px;margin-bottom:2px;display:flex;justify-content:space-between;gap:8px}
@@ -195,19 +214,32 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
     </div>
   </header>
 
-  <aside id="left" aria-label="Presets">
-    <div class="phead"><h2>Presets</h2>
-      <div class="row"><button class="btn small" id="btnImportPreset">Import</button><button class="btn small" id="btnSavePreset" disabled>Save current</button></div>
-    </div>
-    <div class="pbody">
-      <div class="saveform" id="saveForm"><input id="saveName" placeholder="Preset name" maxlength="60"><button class="btn small primary" id="saveGo">Save</button></div>
-      <div class="amount" id="amountBox">
-        <div class="t"><b id="amountName"></b><span id="amountVal">100%</span></div>
-        <input type="range" id="amountRange" min="0" max="200" step="1" value="100" aria-label="Preset amount">
+  <aside id="left" aria-label="Looks and presets" style="display:flex;flex-direction:column">
+    <div class="ltabs"><div class="seg" id="leftTabs"><button data-v="looks" aria-pressed="true">Looks</button><button data-v="presets" aria-pressed="false">My presets</button></div></div>
+    <div class="pane on" id="looksPane">
+      <div class="lookcard" id="lookCard">
+        <div class="t"><b id="lookName"></b><span id="lookVal">100%</span></div>
+        <input type="range" id="lookRange" min="0" max="150" step="1" value="100" aria-label="Look strength">
+        <label class="chk"><input type="checkbox" id="lookAuto" checked> Auto-balance this photo first</label>
       </div>
-      <input class="search" id="psearch" type="search" placeholder="Search presets" aria-label="Search presets">
+      <div class="lnote" id="lookNote">Open a photo to see these looks applied to it.</div>
+      <div class="lgrid" id="lgrid"></div>
     </div>
-    <div id="plist"></div>
+    <div class="pane" id="presetsPane">
+      <div class="phead"><h2>My presets</h2>
+        <div class="row"><button class="btn small" id="btnImportPreset">Import</button><button class="btn small" id="btnSavePreset" disabled>Save current</button></div>
+      </div>
+      <div class="pbody">
+        <div class="saveform" id="saveForm"><input id="saveName" placeholder="Preset name" maxlength="60"><button class="btn small primary" id="saveGo">Save</button></div>
+        <div class="amount" id="amountBox">
+          <div class="t"><b id="amountName"></b><span id="amountVal">100%</span></div>
+          <input type="range" id="amountRange" min="0" max="200" step="1" value="100" aria-label="Preset amount">
+        </div>
+        <label class="chk" style="margin:0"><input type="checkbox" id="adaptPresets" checked> Adapt exposure and white balance to each photo</label>
+        <input class="search" id="psearch" type="search" placeholder="Search presets" aria-label="Search presets">
+      </div>
+      <div id="plist"></div>
+    </div>
   </aside>
 
   <main id="stage" aria-label="Photo">
@@ -225,7 +257,7 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
     <div class="beforetag" id="beforetag">Before</div>
   </main>
 
-  <nav id="mtabs"><button id="tabPresets" aria-pressed="false">Presets</button><button id="tabAdjust" aria-pressed="true">Adjust</button></nav>
+  <nav id="mtabs"><button id="tabPresets" aria-pressed="false">Looks</button><button id="tabAdjust" aria-pressed="true">Adjust</button></nav>
 
   <aside id="right" aria-label="Adjustments">
     <div class="histwrap">
@@ -344,7 +376,7 @@ function defaultParams(img) {
     cg:{ s:{h:0,s:0,l:0}, m:{h:0,s:0,l:0}, h:{h:0,s:0,l:0}, g:{h:0,s:0,l:0} }, cgBlend:50, cgBal:0,
     sharp: raw ? 40 : 0, sharpRadius:1, sharpDetail:25, sharpMask:0, lnr:0, cnr: raw ? 25 : 0,
     vigAmt:0, vigMid:50, vigRound:0, vigFeather:50, grainAmt:0, grainSize:25, grainRough:50,
-    crop:{x:0,y:0,w:1,h:1}, angle:0, orient:0, flipH:false, aspect:'original'
+    crop:{x:0,y:0,w:1,h:1}, angle:0, orient:0, flipH:false, aspect:'original', look:null
   };
 }
 const getPath = (o, p) => p.split('.').reduce((a, k) => a == null ? a : a[k], o);
@@ -877,7 +909,7 @@ function cropInside(c) {
 }
 function aspectValue(p) {
   const [W, H] = oriDims(p, SRC.w, SRC.h);
-  const A = { original: W/H, '1:1': 1, '4:5': 4/5, '5:4': 5/4, '3:2': 3/2, '2:3': 2/3, '16:9': 16/9, '9:16': 9/16 };
+  const A = { original: W/H, '1:1': 1, '4:5': 4/5, '5:4': 5/4, '3:2': 3/2, '2:3': 2/3, '16:9': 16/9, '9:16': 9/16, '2.39:1': 2.39, '1.91:1': 1.91 };
   return A[p.aspect] || null;
 }
 function inscribedCrop(p, r) {
@@ -931,7 +963,7 @@ $('#overlay').addEventListener('pointermove', e => {
   }
   if (cropInside(c)) { params.crop = c; requestRender(); }
 });
-const endCrop = () => { if (cropDrag) { cropDrag = null; commit(); } };
+const endCrop = () => { if (cropDrag) { cropDrag = null; commit(); renderLookThumbsSoon(); } };
 $('#overlay').addEventListener('pointerup', endCrop);
 $('#overlay').addEventListener('pointercancel', endCrop);
 
@@ -988,7 +1020,7 @@ function restore(i) {
   hIndex = i; const before = params; params = JSON.parse(history[i]);
   presetCtx = null; refreshAmount();
   if (before.sharpRadius !== params.sharpRadius) {}
-  refreshUI(); requestRender(); updateHistoryButtons(); saveEditSoon();
+  refreshUI(); refreshLookCard(); requestRender(); updateHistoryButtons(); saveEditSoon();
 }
 let saveT;
 function saveEditSoon() { clearTimeout(saveT); saveT = setTimeout(() => { if (IMG) { store.set('negative.edit.' + IMG.key, params); const idx = store.get('negative.edits', []).filter(k => k !== IMG.key); idx.unshift(IMG.key); idx.slice(60).forEach(k => store.del('negative.edit.' + k)); store.set('negative.edits', idx.slice(0, 60)); } }, 600); }
@@ -1113,14 +1145,14 @@ function buildPanels() {
   // Crop
   b = section('crop', 'Crop and rotate', false);
   sub(b, 'Aspect ratio');
-  const aspects = [['original','Original'],['1:1','1:1'],['4:5','4:5'],['3:2','3:2'],['16:9','16:9'],['9:16','9:16'],['free','Free']];
-  aspectSeg = seg(b, aspects, () => params.aspect, v => { params.aspect = v; if (v !== 'free') refitCrop(); requestRender(); commit(); });
+  const aspects = [['original','Original'],['1:1','1:1'],['4:5','4:5'],['9:16','9:16'],['3:2','3:2'],['16:9','16:9'],['2.39:1','2.39:1'],['1.91:1','1.91:1'],['free','Free']];
+  aspectSeg = seg(b, aspects, () => params.aspect, v => { params.aspect = v; if (v !== 'free') refitCrop(); requestRender(); commit(); renderLookThumbsSoon(); });
   aspectSeg.el.style.flexWrap = 'wrap';
   makeSlider(b, { path:'angle', label:'Straighten', min:-45, max:45, step:0.1, dp:1, fmt: v => fmtSigned(v, 1) + '°', onSet: () => refitCrop() });
   const rr = document.createElement('div'); rr.className = 'row'; rr.style.marginTop = '6px';
   rr.innerHTML = '<button class="btn small" id="rotL">Rotate left</button><button class="btn small" id="rotR">Rotate right</button><button class="btn small" id="flipH">Flip</button><button class="btn small" id="cropReset">Reset crop</button>';
   b.appendChild(rr);
-  const rot = dir => { params.orient = (params.orient + dir + 4) % 4; params.aspect = params.aspect === 'free' ? 'original' : params.aspect; refitCrop(); requestRender(); commit(); refreshUI(); };
+  const rot = dir => { params.orient = (params.orient + dir + 4) % 4; params.aspect = params.aspect === 'free' ? 'original' : params.aspect; refitCrop(); requestRender(); commit(); refreshUI(); renderLookThumbsSoon(); };
   $('#rotL').onclick = () => rot(3); $('#rotR').onclick = () => rot(1);
   $('#flipH').onclick = () => { params.flipH = !params.flipH; requestRender(); commit(); };
   $('#cropReset').onclick = () => { params.angle = 0; params.aspect = 'original'; params.crop = { x:0, y:0, w:1, h:1 }; requestRender(); commit(); refreshUI(); };
@@ -1428,8 +1460,9 @@ function presetById(id) { return presets.find(p => p.id === id); }
 function applyPreset(id) {
   const pr = presetById(id); if (!pr || !IMG) return;
   const base = clone(params);
-  presetCtx = { id, base, amount: 1 };
-  params = applyPresetParams(base, pr.params, 1);
+  const pp = presetForPhoto(pr);
+  presetCtx = { id, base, amount: 1, pp };
+  params = applyPresetParams(base, pp, 1);
   if (pr.params._auto) autoWB();
   activePresetId = id;
   previewParams = null; refreshUI(); refreshAmount(); requestRender(); commit(); renderPresets();
@@ -1445,7 +1478,7 @@ function refreshAmount() {
 $('#amountRange').addEventListener('input', () => {
   if (!presetCtx) return; const pr = presetById(presetCtx.id); if (!pr) return;
   presetCtx.amount = +$('#amountRange').value/100; $('#amountVal').textContent = $('#amountRange').value + '%';
-  params = applyPresetParams(presetCtx.base, pr.params, presetCtx.amount); syncAll(); drawCurve(); drawWheel(); updateSectionCounts(); requestRender();
+  params = applyPresetParams(presetCtx.base, presetCtx.pp || pr.params, presetCtx.amount); syncAll(); drawCurve(); drawWheel(); updateSectionCounts(); requestRender();
 });
 $('#amountRange').addEventListener('change', commit);
 let hoverT = null;
@@ -1467,7 +1500,7 @@ function renderPresets() {
     it.querySelector('.pname').addEventListener('click', () => { clearTimeout(hoverT); applyPreset(p.id); });
     it.querySelector('.pname').addEventListener('pointerenter', e => {
       if (e.pointerType !== 'mouse' || !IMG) return; clearTimeout(hoverT);
-      hoverT = setTimeout(() => { previewParams = applyPresetParams(params, p.params, 1); requestRender(); }, 140);
+      hoverT = setTimeout(() => { previewParams = applyPresetParams(params, presetForPhoto(p), 1); requestRender(); }, 140);
     });
     it.querySelector('.pname').addEventListener('pointerleave', () => { clearTimeout(hoverT); if (previewParams) { previewParams = null; requestRender(); } });
     it.querySelector('.pdel').addEventListener('click', () => {
@@ -1485,7 +1518,7 @@ $('#presetIn').addEventListener('change', e => { const f = [...e.target.files]; 
 $('#btnSavePreset').onclick = () => { const f = $('#saveForm'); f.classList.toggle('on'); if (f.classList.contains('on')) $('#saveName').focus(); };
 const doSave = () => {
   const name = $('#saveName').value.trim(); if (!name) { $('#saveName').focus(); return; }
-  const pp = clone(params); for (const k of GEOM_KEYS) delete pp[k];
+  const pp = clone(params); for (const k of GEOM_KEYS) delete pp[k]; delete pp.look;
   if (pp.wbAsShot) { delete pp.temp; delete pp.tint; }
   presets.push({ id: Date.now().toString(36), name, group: 'My presets', params: pp, skipped: [] });
   presets.sort((a, b) => (a.group || '').localeCompare(b.group || '') || a.name.localeCompare(b.name));
@@ -1537,6 +1570,7 @@ async function openPhoto(file) {
     const saved = store.get('negative.edit.' + key, null);
     params = Object.assign(defaultParams(IMG), saved || {});
     levels.proxy = buildLevel(Math.min(PROXY_LONG, Math.max(SRC.w, SRC.h)));
+    IMG.auto = analyseAuto();
     history = []; hIndex = -1; commit(); presetCtx = null; activePresetId = null; refreshAmount(); renderPresets();
     $('#empty').style.display = 'none';
     $('#fname').textContent = file.name; $('#fname').classList.remove('muted');
@@ -1546,6 +1580,7 @@ async function openPhoto(file) {
     refreshUI(); setZoom(false); setCrop(false);
     busy(false);
     requestRender();
+    refreshLookCard(); renderLookThumbs();
     if (saved) toast('Restored your last edit of this photo. Use Reset to start over.');
     setTimeout(() => ensureFull(), 400);
   } catch (e) {
@@ -1594,7 +1629,7 @@ const setBefore = on => { if (!IMG) return; view.before = on; $('#btnBefore').se
 $('#btnBefore').onclick = () => setBefore(!view.before);
 $('#btnUndo').onclick = () => { if (hIndex > 0) restore(hIndex - 1); };
 $('#btnRedo').onclick = () => { if (hIndex < history.length - 1) restore(hIndex + 1); };
-$('#btnReset').onclick = () => { if (!IMG) return; params = defaultParams(IMG); presetCtx = null; activePresetId = null; refreshAmount(); renderPresets(); refreshUI(); requestRender(); commit(); toast('Reset to the original. Undo brings your edit back.'); };
+$('#btnReset').onclick = () => { if (!IMG) return; params = defaultParams(IMG); presetCtx = null; activePresetId = null; refreshAmount(); renderPresets(); refreshUI(); refreshLookCard(); requestRender(); commit(); toast('Reset to the original. Undo brings your edit back.'); };
 $('#tabPresets').onclick = () => { $('#app').dataset.tab = 'presets'; $('#tabPresets').setAttribute('aria-pressed', 'true'); $('#tabAdjust').setAttribute('aria-pressed', 'false'); };
 $('#tabAdjust').onclick = () => { $('#app').dataset.tab = 'adjust'; $('#tabAdjust').setAttribute('aria-pressed', 'true'); $('#tabPresets').setAttribute('aria-pressed', 'false'); };
 document.addEventListener('keydown', e => {
@@ -1749,6 +1784,192 @@ async function encodePNG16(W, H, rows, progress) {
   return new Blob(parts, { type: 'image/png' });
 }
 
+
+/* ================= looks ================= */
+const Z = (h, s, l = 0) => ({ h, s, l });
+const LOOKS = [
+  { id:'lowkey', name:'Low-key mood', d:{ exposure:-0.45, contrast:22, highlights:-30, shadows:-15, blacks:-28, clarity:14, saturation:-22, vigAmt:-35, vigMid:35, vigFeather:60 },
+    cg:{ s:Z(195,22), h:Z(35,10) }, curve:[[0,6],[70,58],[190,196],[255,250]] },
+  { id:'tealorange', name:'Teal and orange', d:{ contrast:16, vibrance:12, highlights:-15, shadows:10 },
+    hue:[0,-4,-18,55,10,-10,0,0], hsat:[0,10,-10,-25,0,-10,0,0], cg:{ s:Z(192,34), h:Z(34,24) }, curve:[[0,4],[64,56],[192,200],[255,252]] },
+  { id:'tungsten', name:'Tungsten glow', warm:40, d:{ contrast:28, highlights:-22, blacks:-24, clarity:10, vigAmt:-30, vigMid:40, saturation:-4 },
+    hsat:[10,14,0,-30,-20,-20,0,0], cg:{ s:Z(15,30,-8), g:Z(25,12) }, curve:[[0,4],[64,52],[192,198],[255,250]] },
+  { id:'spotlight', name:'Spotlight portrait', d:{ exposure:-0.3, contrast:20, blacks:-38, highlights:-12, saturation:-10, clarity:8, vigAmt:-62, vigMid:22, vigFeather:72, vigRound:60 },
+    cg:{ s:Z(205,10) }, curve:[[0,0],[60,46],[190,196],[255,252]] },
+  { id:'film', name:'Film fade', d:{ saturation:-10, vibrance:10, contrast:6, grainAmt:20, grainSize:30 },
+    hue:[0,0,-10,30,0,0,0,0], hsat:[10,0,-10,-30,-10,-15,0,0], cg:{ s:Z(200,12), h:Z(40,15) }, curve:[[0,26],[60,64],[190,192],[255,240]] },
+  { id:'golden', name:'Golden hour', warm:30, d:{ highlights:-30, shadows:20, vibrance:20, contrast:6, dehaze:-4 },
+    hlum:[0,10,5,0,0,0,0,0], cg:{ m:Z(32,10), h:Z(40,28) }, curve:[[0,10],[128,132],[255,250]] },
+  { id:'earthy', name:'Earthy muted', d:{ saturation:-25, vibrance:6, contrast:10, clarity:10 },
+    hue:[0,0,0,20,0,0,0,0], hsat:[0,-5,-15,-40,-20,-40,-10,-10], hlum:[0,0,0,-10,0,-10,0,0], cg:{ s:Z(210,10), h:Z(45,12) }, curve:[[0,14],[128,128],[255,246]] },
+  { id:'coolnight', name:'Cool night', warm:-40, d:{ contrast:20, clarity:14, texture:10, grainAmt:22, vigAmt:-25, vibrance:6 },
+    hsat:[0,0,-20,-10,10,20,0,0], cg:{ s:Z(212,34), m:Z(196,14), h:Z(190,8) }, curve:[[0,6],[64,54],[192,198],[255,250]] },
+  { id:'urban', name:'Urban dusk', warm:-12, d:{ contrast:15, dehaze:10, vibrance:15 },
+    hsat:[0,10,0,-20,10,15,0,0], cg:{ s:Z(222,26), h:Z(40,24) } },
+  { id:'airy', name:'Bright and airy', d:{ exposure:0.3, shadows:40, highlights:-40, contrast:-15, whites:10, saturation:-10, vibrance:15 },
+    hsat:[0,-5,-10,-20,0,0,0,0], hlum:[0,10,5,10,0,10,0,0], cg:{ h:Z(45,8) }, curve:[[0,18],[128,134],[255,252]] },
+  { id:'noir', name:'Matte noir', bw:true, d:{ contrast:35, clarity:25, blacks:-20, highlights:-20, grainAmt:22, vigAmt:-30 },
+    gray:[10,15,5,-10,-10,-15,0,0], curve:[[0,14],[64,52],[192,200],[255,248]] },
+  { id:'softmono', name:'Soft mono', bw:true, d:{ contrast:-10, highlights:-20, shadows:20, grainAmt:10 },
+    gray:[10,20,10,0,0,-5,0,0], curve:[[0,28],[128,130],[255,244]] }
+];
+const ADD_KEYS = ['exposure','contrast','highlights','shadows','whites','blacks','texture','clarity','dehaze','vibrance','saturation','vigAmt','vigMid','vigFeather','vigRound','grainAmt','grainSize','grainRough'];
+const RANGE = { exposure:[-5,5], vigMid:[0,100], vigFeather:[0,100], grainAmt:[0,100], grainSize:[0,100], grainRough:[0,100] };
+const ZERO_Z = () => ({ h:0, s:0, l:0 });
+
+/* analyse the proxy once per photo: exposure to a pleasant mid grey, recover clipped highlights, lift crushed shadows */
+function analyseAuto() {
+  try {
+    const L = levels.proxy; const w = Math.min(320, L.w), h = Math.max(1, Math.round(w*L.h/L.w));
+    const t = newTex(w, h, 'RGBA32F', false);
+    pass(PR.areaUF, t, { uScale: [L.w/w, L.h/h], uMul: 1/65535 }, [['uSrc', L.base]]);
+    const px = new Float32Array(w*h*4); gl.readPixels(0, 0, w, h, gl.RGBA, gl.FLOAT, px); delTex(t);
+    const e = Math.pow(2, IMG.baseline); const Y = [];
+    for (let i = 0; i < px.length; i += 4) Y.push((px[i]*LW[0] + px[i+1]*LW[1] + px[i+2]*LW[2])*e);
+    Y.sort((x, y) => x - y);
+    const q = f => Y[Math.min(Y.length-1, Math.floor(f*Y.length))];
+    const med = Math.max(q(0.5), 1e-5);
+    let exposure = clamp(Math.log2(0.12/med)*0.7, -1.2, 1.2);
+    const g = Math.pow(2, exposure);
+    const hi = q(0.995)*g, lo = q(0.03)*g;
+    const highlights = hi > 0.9 ? -Math.round(clamp(Math.log2(hi/0.9)*45 + 10, 0, 70)) : 0;
+    const shadows = lo < 0.004 ? Math.round(clamp(-Math.log2(lo/0.004 + 1e-6)*6, 5, 35)) : 0;
+    return { exposure: Math.round(exposure*100)/100, highlights, shadows };
+  } catch (e) { console.error(e); return { exposure:0, highlights:0, shadows:0 }; }
+}
+
+/* what a look (at strength s, with or without auto balance) adds on top of the photo's defaults */
+function lookContrib(id, s, auto) {
+  const c = { num:{}, warm:0, bw:false, curve:null, cg:null, arr:{} };
+  for (const k of ADD_KEYS) c.num[k] = 0;
+  for (const k of ['hue','hsat','hlum','gray']) c.arr[k] = [0,0,0,0,0,0,0,0];
+  c.num.cgBlend = 0;
+  if (auto && IMG && IMG.auto) { c.num.exposure += IMG.auto.exposure; c.num.highlights += IMG.auto.highlights; c.num.shadows += IMG.auto.shadows; }
+  const L = LOOKS.find(x => x.id === id);
+  if (!L || s <= 0) return c;
+  for (const k in (L.d || {})) c.num[k] += L.d[k]*s;
+  for (const k of ['hue','hsat','hlum','gray']) if (L[k]) c.arr[k] = L[k].map(v => v*s);
+  c.warm = (L.warm || 0)*s;
+  c.bw = !!L.bw;
+  c.curve = L.curve ? blendCurve(ID_CURVE(), L.curve, Math.min(s, 1.5)) : null;
+  if (L.curve && s > 1) c.curve = L.curve.map(([x, y]) => [x, Math.round(clamp(x + (y - x)*s, 0, 255))]);
+  if (L.cg) { c.cg = {}; for (const z in L.cg) c.cg[z] = { h: L.cg[z].h, s: clamp(L.cg[z].s*s, 0, 100), l: (L.cg[z].l || 0)*s }; }
+  return c;
+}
+const sameJ = (x, y) => JSON.stringify(x) === JSON.stringify(y);
+/* move params from one look state to another, keeping anything the user adjusted by hand */
+function shiftLook(p, from, to) {
+  const A = lookContrib(from.id, from.s, from.auto), B = lookContrib(to.id, to.s, to.auto);
+  for (const k in B.num) { const [lo, hi] = RANGE[k] || (k === 'cgBlend' ? [0,100] : [-100,100]); p[k] = clamp(p[k] + B.num[k] - A.num[k], lo, hi); }
+  for (const k in B.arr) p[k] = p[k].map((v, i) => clamp(v + B.arr[k][i] - A.arr[k][i], -100, 100));
+  const dw = B.warm - A.warm;
+  if (dw) { p.temp = ROUND_T(clamp(1e6/(1e6/p.temp - dw), T_MIN, T_MAX)); p.wbAsShot = false; }
+  if (A.bw !== B.bw) p.bw = B.bw;
+  const curA = A.curve || ID_CURVE(), curB = B.curve || ID_CURVE();
+  if (sameJ(p.curve.m, curA)) p.curve.m = clone(curB);
+  for (const z of ['s','m','h','g']) {
+    const za = (A.cg && A.cg[z]) || ZERO_Z(), zb = (B.cg && B.cg[z]) || ZERO_Z();
+    const cur = p.cg[z];
+    if (Math.abs(cur.h - za.h) < 0.5 || za.s === 0) { cur.h = zb.s ? zb.h : (za.s ? cur.h : cur.h); if (zb.s) cur.h = zb.h; }
+    cur.s = clamp(cur.s + zb.s - za.s, 0, 100); cur.l = clamp(cur.l + zb.l - za.l, -100, 100);
+  }
+  p.look = to.id || to.auto ? { id: to.id, s: to.s, auto: to.auto } : null;
+  return p;
+}
+const NO_LOOK = { id:null, s:0, auto:false };
+const isUntouched = p => { const d = defaultParams(IMG); return ['exposure','contrast','highlights','shadows','whites','blacks'].every(k => Math.abs(p[k] - d[k]) < 1e-6); };
+function selectLook(id) {
+  if (!IMG) return;
+  const cur = params.look || NO_LOOK;
+  const auto = params.look ? params.look.auto : isUntouched(params);
+  const to = id ? { id, s: cur.id ? cur.s : 1, auto } : { id:null, s:0, auto };
+  presetCtx = null; refreshAmount(); previewParams = null;
+  params = shiftLook(clone(params), cur, to);
+  if (!to.id && !to.auto) params.look = null;
+  refreshUI(); refreshLookCard(); requestRender(); commit();
+}
+function refreshLookCard() {
+  const lk = params.look; const card = $('#lookCard');
+  document.querySelectorAll('.lk').forEach(b => b.setAttribute('aria-pressed', String((b.dataset.id || null) === ((lk && lk.id) || null) && !!IMG)));
+  if (!lk || !lk.id) { card.classList.remove('on'); return; }
+  card.classList.add('on');
+  const L = LOOKS.find(x => x.id === lk.id);
+  $('#lookName').textContent = L ? L.name : 'Look';
+  $('#lookRange').value = Math.round(lk.s*100); $('#lookVal').textContent = Math.round(lk.s*100) + '%';
+  $('#lookAuto').checked = !!lk.auto;
+}
+$('#lookRange').addEventListener('input', () => {
+  const lk = params.look; if (!lk) return;
+  const s = +$('#lookRange').value/100; $('#lookVal').textContent = $('#lookRange').value + '%';
+  params = shiftLook(params, lk, { id: lk.id, s, auto: lk.auto });
+  syncAll(); drawCurve(); drawWheel(); updateSectionCounts(); requestRender();
+});
+$('#lookRange').addEventListener('change', commit);
+$('#lookAuto').addEventListener('change', () => {
+  const lk = params.look; if (!lk) return;
+  params = shiftLook(params, lk, { id: lk.id, s: lk.s, auto: $('#lookAuto').checked });
+  refreshUI(); requestRender(); commit();
+});
+
+/* gallery */
+let thumbTex = null;
+function buildLookGrid() {
+  const g = $('#lgrid'); g.innerHTML = '';
+  const items = [{ id:'', name:'No look' }, ...LOOKS];
+  for (const L of items) {
+    const b = document.createElement('button'); b.className = 'lk'; b.dataset.id = L.id; b.setAttribute('aria-pressed', 'false');
+    b.innerHTML = `<canvas width="240" height="160"></canvas><span></span>`;
+    b.querySelector('span').textContent = L.name;
+    b.addEventListener('click', () => selectLook(L.id || null));
+    b.addEventListener('pointerenter', e => {
+      if (e.pointerType !== 'mouse' || !IMG) return; clearTimeout(hoverT);
+      hoverT = setTimeout(() => { const cur = params.look || NO_LOOK; const auto = params.look ? params.look.auto : isUntouched(params);
+        previewParams = shiftLook(clone(params), cur, { id: L.id || null, s: L.id ? (cur.id ? cur.s : 1) : 0, auto }); requestRender(); }, 140);
+    });
+    b.addEventListener('pointerleave', () => { clearTimeout(hoverT); if (previewParams) { previewParams = null; requestRender(); } });
+    g.appendChild(b);
+  }
+}
+let thumbsT = null;
+function renderLookThumbsSoon() { clearTimeout(thumbsT); thumbsT = setTimeout(renderLookThumbs, 250); }
+function renderLookThumbs() {
+  if (!IMG || !levels.proxy) return;
+  $('#lookNote').textContent = 'Pick a look, then fine-tune it with the strength slider or any adjustment on the right.';
+  const base = defaultParams(IMG); for (const k of GEOM_KEYS) base[k] = clone(params[k]);
+  base.sharp = 0; base.cnr = params.cnr;
+  const [Wf, Hf] = oriDims(base, SRC.w, SRC.h); const ar = (base.crop.w*Wf)/(base.crop.h*Hf);
+  const tw = 240, th = Math.max(40, Math.min(320, Math.round(tw/ar)));
+  if (!thumbTex || thumbTex.w !== tw || thumbTex.h !== th) { delTex(thumbTex); thumbTex = newTex(tw, th, 'RGBA8', false); }
+  const px = new Uint8ClampedArray(tw*th*4);
+  updateBlurs(levels.proxy, false);
+  document.querySelectorAll('.lk').forEach(b => {
+    const id = b.dataset.id || null;
+    const p = shiftLook(clone(base), NO_LOOK, { id, s: id ? 1 : 0, auto: true });
+    drawMain(levels.proxy, p, { dst: thumbTex, vp: [0, 0, tw, th], out0: [0, 0], out1: [1, 1], flipY: false });
+    gl.readPixels(0, 0, tw, th, gl.RGBA, gl.UNSIGNED_BYTE, px);
+    const cv = b.querySelector('canvas'); cv.width = tw; cv.height = th; cv.style.setProperty('--ar', `${tw}/${th}`);
+    cv.getContext('2d').putImageData(new ImageData(px, tw, th), 0, 0);
+  });
+  requestRender();
+}
+
+/* imported presets: keep the style, let this photo decide exposure and white balance */
+function presetForPhoto(pr) {
+  if (!$('#adaptPresets').checked || !IMG) return pr.params;
+  const pp = clone(pr.params);
+  delete pp.temp; delete pp.tint; delete pp.tempShift; delete pp.tintShift; delete pp.wbAsShot; delete pp._auto;
+  if (IMG.auto) pp.exposure = clamp(IMG.auto.exposure + ((pr.params.exposure || 0) > 0 ? 0 : (pr.params.exposure || 0))*0.5, -5, 5);
+  return pp;
+}
+$('#adaptPresets').checked = store.get('negative.adapt', true);
+$('#adaptPresets').addEventListener('change', () => store.set('negative.adapt', $('#adaptPresets').checked));
+$('#leftTabs').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  document.querySelectorAll('#leftTabs button').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+  $('#looksPane').classList.toggle('on', b.dataset.v === 'looks'); $('#presetsPane').classList.toggle('on', b.dataset.v === 'presets');
+});
+buildLookGrid();
+
 /* ================= boot ================= */
 buildPanels(); refreshUI(); renderPresets();
 if (!glOK) {
@@ -1757,7 +1978,7 @@ if (!glOK) {
   $('#btnOpen2').style.display = 'none';
 } else requestRender();
 canvas.addEventListener('webglcontextlost', e => { e.preventDefault(); toast('The graphics context was lost. Reload the page and reopen your photo; your edit is saved.', 9000); });
-window.__neg = { openPhoto, importPresets, get params() { return params; }, set params(v) { params = v; refreshUI(); requestRender(); }, exportImage, render, applyPreset, get presets() { return presets; }, view, setCrop, setZoom, refitCrop, commit };
+window.__neg = { openPhoto, importPresets, get params() { return params; }, set params(v) { params = v; refreshUI(); requestRender(); }, exportImage, render, applyPreset, get presets() { return presets; }, view, setCrop, setZoom, refitCrop, commit, selectLook, LOOKS, get img() { return IMG; } };
 })();
 </script>
 </body>
