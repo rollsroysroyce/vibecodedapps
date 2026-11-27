@@ -1,0 +1,339 @@
+{
+  "app": "peso-budget",
+  "version": 1,
+  "exported": "2026-11-27T00:00:00Z",
+  "state": {
+    "v": 1,
+    "salary": 120000,
+    "payType": "semi",
+    "payDays": [
+      5,
+      20
+    ],
+    "autoGov": true,
+    "gov": {
+      "sss": 0,
+      "philhealth": 0,
+      "pagibig": 0,
+      "tax": 0
+    },
+    "otherDeductions": [
+      {
+        "id": "2y6u7vo",
+        "name": "",
+        "amount": 900
+      },
+      {
+        "id": "bvtrsy6",
+        "name": "",
+        "amount": 1800
+      }
+    ],
+    "otherIncome": [],
+    "expenses": [
+      {
+        "id": "oobkk08",
+        "name": "Car",
+        "amount": 28500
+      },
+      {
+        "id": "7fcoy27",
+        "name": "Food and groceries",
+        "amount": 24000
+      },
+      {
+        "id": "4jpw0r1",
+        "name": "Electricity, water, and internet",
+        "amount": 12000
+      },
+      {
+        "id": "69a3vlb",
+        "name": "Transport",
+        "amount": 0
+      }
+    ],
+    "cards": [
+      {
+        "id": "8lff0sv",
+        "name": "BPI",
+        "dueDay": 14,
+        "regular": 0,
+        "installments": [
+          {
+            "id": "7q2tbh9",
+            "item": "Apple Watch",
+            "monthly": 0,
+            "total": 24,
+            "paid": 17,
+            "asOf": 24322,
+            "purchase": 39230,
+            "rate": 0
+          },
+          {
+            "id": "ocez0de",
+            "item": "Credit To Cash",
+            "purchase": 20000,
+            "rate": 0.999633,
+            "total": 24,
+            "paid": 16,
+            "asOf": 24322
+          },
+          {
+            "id": "wccs24x",
+            "item": "Credit To Cash 2",
+            "purchase": 30000,
+            "rate": 0.5897,
+            "total": 60,
+            "paid": 12,
+            "asOf": 24322
+          },
+          {
+            "id": "gktoejh",
+            "item": "Balance Conversion",
+            "purchase": 21674,
+            "rate": 0.68989,
+            "total": 24,
+            "paid": 9,
+            "asOf": 24322
+          },
+          {
+            "id": "4a888gu",
+            "item": "Credit To Cash 2.2",
+            "purchase": 30000,
+            "rate": 0.5897,
+            "total": 60,
+            "paid": 12,
+            "asOf": 24322
+          },
+          {
+            "id": "mgxt5hd",
+            "item": "Credit To Cash 3",
+            "purchase": 30000,
+            "rate": 0.5897,
+            "total": 60,
+            "paid": 9,
+            "asOf": 24322
+          },
+          {
+            "id": "s3ogi4s",
+            "item": "Credit To Cash 3",
+            "purchase": 30000,
+            "rate": 0.5897,
+            "total": 60,
+            "paid": 8,
+            "asOf": 24322
+          },
+          {
+            "id": "pcwohsq",
+            "item": "Credit To Cash 4",
+            "purchase": 40000,
+            "rate": 0.589708,
+            "total": 60,
+            "paid": 2,
+            "asOf": 24322
+          },
+          {
+            "id": "dif2thk",
+            "item": "Credit To Cash 4",
+            "purchase": 30000,
+            "rate": 0.5897,
+            "total": 60,
+            "paid": 2,
+            "asOf": 24322
+          },
+          {
+            "id": "k35r8tr",
+            "item": "Car Insurance",
+            "purchase": 24310.05,
+            "rate": 1e-05,
+            "total": 12,
+            "paid": 0,
+            "asOf": 24322
+          }
+        ],
+        "purchases": [
+          {
+            "id": "a691a94",
+            "item": "Gas",
+            "amount": 2500,
+            "month": 24323
+          },
+          {
+            "id": "moashld",
+            "item": "savemore",
+            "amount": 980.17,
+            "month": 24323
+          },
+          {
+            "id": "zd0b4js",
+            "item": "Google monthly",
+            "amount": 700,
+            "month": 24323
+          }
+        ]
+      },
+      {
+        "id": "0i4ljqx",
+        "name": "Security Bank",
+        "dueDay": 26,
+        "regular": 0,
+        "installments": [
+          {
+            "id": "46jlkoh",
+            "mode": "stmt",
+            "item": "SAVE MORE ATUOCONVERT",
+            "total": 12,
+            "rate": 1,
+            "left": 6,
+            "balance": 2800.4,
+            "purchase": 5000.714285714286,
+            "paid": 6,
+            "asOf": 24323
+          },
+          {
+            "id": "9waxkvj",
+            "mode": "stmt",
+            "item": "ROBINSON",
+            "total": 12,
+            "rate": 1,
+            "left": 6,
+            "balance": 3348.76,
+            "purchase": 5979.9285714285725,
+            "paid": 6,
+            "asOf": 24323
+          },
+          {
+            "id": "ib8l44a",
+            "mode": "stmt",
+            "item": "METRO",
+            "total": 12,
+            "rate": 1,
+            "left": 7,
+            "balance": 3930.53,
+            "purchase": 6016.117346938777,
+            "paid": 5,
+            "asOf": 24323
+          },
+          {
+            "id": "ozjfm2i",
+            "mode": "stmt",
+            "item": "TOYOTA ORMOC",
+            "total": 12,
+            "rate": 1,
+            "left": 7,
+            "balance": 7150.03,
+            "purchase": 10943.923469387755,
+            "paid": 5,
+            "asOf": 24323
+          },
+          {
+            "id": "egd1gxo",
+            "mode": "stmt",
+            "item": "CEBU PAC1",
+            "total": 12,
+            "rate": 1,
+            "left": 8,
+            "balance": 10856.22,
+            "purchase": 14539.580357142857,
+            "paid": 4,
+            "asOf": 24323
+          },
+          {
+            "id": "4w86zmp",
+            "mode": "stmt",
+            "item": "CEBU PAC2",
+            "total": 12,
+            "rate": 1,
+            "left": 11,
+            "balance": 6528.08,
+            "purchase": 6358.5194805194815,
+            "paid": 1,
+            "asOf": 24323
+          },
+          {
+            "id": "2iij8h8",
+            "item": "ACCOMMODATION 1",
+            "purchase": 20046.99,
+            "rate": 1,
+            "total": 12,
+            "paid": 0,
+            "asOf": 24323
+          },
+          {
+            "id": "yw6s0ij",
+            "item": "ACCOMMODATION 2",
+            "purchase": 5801.25,
+            "rate": 1,
+            "total": 12,
+            "paid": 0,
+            "asOf": 24323
+          }
+        ],
+        "purchases": [
+          {
+            "id": "9fkrtma",
+            "item": "yellohotel",
+            "amount": 1417.54,
+            "month": 24323
+          },
+          {
+            "id": "c53l070",
+            "item": "1471.50",
+            "amount": 0,
+            "month": 24323
+          },
+          {
+            "id": "cnf10za",
+            "item": "4068.10",
+            "amount": 0,
+            "month": 24323
+          }
+        ]
+      },
+      {
+        "id": "p7vteok",
+        "name": "CIMB",
+        "dueDay": 0,
+        "regular": 0,
+        "installments": [],
+        "purchases": [
+          {
+            "id": "kgjqbys",
+            "item": "",
+            "amount": 2500,
+            "month": 24323
+          }
+        ]
+      }
+    ],
+    "events": [
+      {
+        "id": "eyn1ook",
+        "name": "Raizen Birthday",
+        "month": 24324,
+        "amount": 30000
+      }
+    ],
+    "windfalls": [
+      {
+        "id": "y5kornf",
+        "name": "",
+        "kind": "13th",
+        "month": 24323,
+        "amount": 106300
+      },
+      {
+        "id": "5qm2i5v",
+        "name": "",
+        "kind": "leave",
+        "month": 24325,
+        "days": 9,
+        "amount": 0
+      }
+    ],
+    "savings": 0,
+    "buffer": 0,
+    "appName": "Royce's budget",
+    "theme": "auto"
+  }
+}
